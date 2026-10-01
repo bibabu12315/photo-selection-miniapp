@@ -78,6 +78,12 @@ export async function adminStatus() {
   return callSafe<{ openid: string; isAdmin: boolean }>('admin', { action: 'status' })
 }
 
-export async function bindAdmin(key: string) {
-  return callSafe<{ bound: boolean; already: boolean }>('admin', { action: 'bind', key })
+/** 零门槛开通摄影师：不需要口令，openid 即身份 */
+export async function bindAdmin() {
+  return callSafe<{ bound: boolean; already: boolean }>('admin', { action: 'bind' })
+}
+
+/** 一次性迁移：把没有归属的老项目归到自己名下（需要迁移密钥） */
+export async function claimLegacy(key: string) {
+  return callSafe<{ updated: number; owner: string }>('admin', { action: 'claimLegacy', key })
 }

@@ -36,27 +36,28 @@ exports.main = async (event = {}) => {
       return { ok: false, error: '无权限：请先绑定摄影师' }
     }
 
+    // 所有 action 都带 OPENID：项目归属到人，摄影师之间互不可见
     switch (event.action) {
       case 'create':
-        return await createProject(event)
+        return await createProject(event, OPENID)
       case 'list':
-        return await listProjects()
+        return await listProjects(OPENID)
       case 'get':
-        return await getProject(event._id)
+        return await getProject(event._id, OPENID)
       case 'remove':
-        return await removeProject(event._id)
+        return await removeProject(event._id, OPENID)
       case 'extend':
-        return await extendProject(event._id)
+        return await extendProject(event._id, OPENID)
       case 'issueUploadCode':
-        return await issueUploadCode(event._id)
+        return await issueUploadCode(event._id, OPENID)
       case 'createInvite':
-        return await createInvite(event)
+        return await createInvite(event, OPENID)
       case 'removeInvite':
-        return await removeInvite(event.inviteId)
+        return await removeInvite(event.inviteId, OPENID)
       case 'listInvites':
-        return await listInvites(event.projectId)
+        return await listInvites(event.projectId, OPENID)
       case 'getInviteQrCode':
-        return await getInviteQrCode(event.inviteId)
+        return await getInviteQrCode(event.inviteId, OPENID)
       default:
         return { ok: false, error: '未知 action: ' + (event.action || '') }
     }
@@ -67,7 +68,7 @@ exports.main = async (event = {}) => {
 
 /* ---------- 项目 ---------- */
 
-async function createProject(event) {
+async function createProject(event, openid) {
   const name = String(event.name || '').trim()
   if (!name) return { ok: false, error: '项目名称不能为空' }
   if (name.length > 30) return { ok: false, error: '项目名称不能超过 30 个字' }
@@ -85,6 +86,7 @@ async function createProject(event) {
   const now = Date.now()
 
   const doc = {
+    ownerOpenid: openid,
     name,
     note: String(event.note || '').trim().slice(0, 200),
     shootDate: shootAt || now,
@@ -108,19 +110,21 @@ async function createProject(event) {
   return { ok: true, data: { _id: add._id } }
 }
 
-async function listProjects() {
+/** 只返回自己的项目 */
+async function listProjects(openid) {
   const res = await db
     .collection('project')
+    .where({ ownerOpenid: openid })
     .orderBy('createdAt', 'desc')
     .limit(100)
     .get()
   return { ok: true, data: { projects: res.data || [] } }
 }
 
-async function getProject(id) {
-  if (!id) return { ok: false, error: '缺少项目 _id' }
-  const res = await db.collection('project').doc(id).get()
-  if (!res.data) return { ok: false, error: '项目不存在' }
+async function getProject(id, openid) {
+  const own = await ownedProject(id, openid)
+  if (!own.ok) return { ok: false, error: own.error }
+  const p = own.project
 
   const invRes = await db.collection('invite').where({ projectId: id }).limit(20).get()
   const invites = (invRes.data || []).map((i) => ({
@@ -132,8 +136,9 @@ async function getProject(id) {
   return { ok: true, data: { project: res.data, invites } }
 }
 
-async function removeProject(id) {
-  if (!id) return { ok: false, error: '缺少项目 _id' }
+async function removeProject(id, openid) {
+  const own = await ownedProject(id, openid)
+  if (!own.ok) return { ok: false, error: own.error }
 
   // 连带清理：邀请 / 选片记录 / 照片记录（云存储文件在控制台手动清理）
   try {
@@ -165,11 +170,10 @@ async function removeProject(id) {
   return { ok: true, data: { removed: true } }
 }
 
-async function extendProject(id) {
-  if (!id) return { ok: false, error: '缺少项目 _id' }
-  const res = await db.collection('project').doc(id).get()
-  const p = res.data
-  if (!p) return { ok: false, error: '项目不存在' }
+async function extendProject(id, openid) {
+  const own = await ownedProject(id, openid)
+  if (!own.ok) return { ok: false, error: own.error }
+  const p = own.project
 
   const base = p.expireAt && p.expireAt > Date.now() ? p.expireAt : Date.now()
   const expireAt = base + 30 * 86400000
@@ -179,8 +183,9 @@ async function extendProject(id) {
   return { ok: true, data: { expireAt } }
 }
 
-async function issueUploadCode(id) {
-  if (!id) return { ok: false, error: '缺少项目 _id' }
+async function issueUploadCode(id, openid) {
+  const own = await ownedProject(id, openid)
+  if (!own.ok) return { ok: false, error: own.error }
 
   const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0')
   const expireAt = Date.now() + 5 * 60 * 1000
@@ -194,14 +199,13 @@ async function issueUploadCode(id) {
 
 /* ---------- 模特邀请 ---------- */
 
-async function createInvite({ projectId, displayName }) {
-  if (!projectId) return { ok: false, error: '缺少项目 _id' }
+async function createInvite({ projectId, displayName }, openid) {
+  const own = await ownedProject(projectId, openid)
+  if (!own.ok) return { ok: false, error: own.error }
+  const p = own.project
+
   const name = String(displayName || '').trim().slice(0, 20)
   if (!name) return { ok: false, error: '请填写模特名字（备注用，如「小王」）' }
-
-  const res = await db.collection('project').doc(projectId).get()
-  const p = res.data
-  if (!p) return { ok: false, error: '项目不存在' }
   if ((p.models || []).length >= MAX_MODELS) {
     return { ok: false, error: `每个项目最多邀请 ${MAX_MODELS} 位模特` }
   }
@@ -229,11 +233,14 @@ async function createInvite({ projectId, displayName }) {
   }
 }
 
-async function removeInvite(inviteId) {
+async function removeInvite(inviteId, openid) {
   if (!inviteId) return { ok: false, error: '缺少邀请 _id' }
   const res = await db.collection('invite').doc(inviteId).get()
   const inv = res.data
   if (!inv) return { ok: false, error: '邀请不存在' }
+
+  const own = await ownedProject(inv.projectId, openid)
+  if (!own.ok) return { ok: false, error: own.error }
 
   try {
     await db.collection('model').doc(inv.modelId).remove()
@@ -263,8 +270,10 @@ async function removeInvite(inviteId) {
   return { ok: true, data: { removed: true } }
 }
 
-async function listInvites(projectId) {
-  if (!projectId) return { ok: false, error: '缺少项目 _id' }
+async function listInvites(projectId, openid) {
+  const own = await ownedProject(projectId, openid)
+  if (!own.ok) return { ok: false, error: own.error }
+
   const res = await db.collection('invite').where({ projectId }).limit(20).get()
   const invites = (res.data || []).map((i) => ({
     _id: i._id,
@@ -275,11 +284,14 @@ async function listInvites(projectId) {
 }
 
 /** 生成模特专属小程序码，scene = 邀请 token（22 位 ≤ 32 字符限制） */
-async function getInviteQrCode(inviteId) {
+async function getInviteQrCode(inviteId, openid) {
   if (!inviteId) return { ok: false, error: '缺少邀请 _id' }
   const res = await db.collection('invite').doc(inviteId).get()
   const inv = res.data
   if (!inv) return { ok: false, error: '邀请不存在' }
+
+  const own = await ownedProject(inv.projectId, openid)
+  if (!own.ok) return { ok: false, error: own.error }
 
   const qr = await cloud.openapi.wxacode.getUnlimited({
     scene: inv.token,
@@ -310,6 +322,26 @@ async function isAdmin(openid) {
   } catch (e) {
     return false
   }
+}
+
+/**
+ * 取项目并校验归属：不是自己的项目一律拒绝，摄影师之间互不可见、互不可删。
+ * 兼容期：老项目没有 ownerOpenid 字段时放行（迁移脚本跑完后所有项目都有归属）。
+ */
+async function ownedProject(id, openid) {
+  if (!id) return { ok: false, error: '缺少项目 _id' }
+  let p = null
+  try {
+    const res = await db.collection('project').doc(id).get()
+    p = res.data
+  } catch (e) {
+    p = null
+  }
+  if (!p) return { ok: false, error: '项目不存在' }
+  if (p.ownerOpenid && p.ownerOpenid !== openid) {
+    return { ok: false, error: '无权限：这不是你的项目' }
+  }
+  return { ok: true, project: p }
 }
 
 /** 日期字符串 → 时间戳，失败返回 0 */

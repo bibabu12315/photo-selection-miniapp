@@ -12,21 +12,14 @@
 
   <block wx:else>
     <view class="block">
-      <input
-        class="input"
-        type="text"
-        placeholder="摄影师口令"
-        password="{{true}}"
-        value="{{key}}"
-        bindinput="onKeyInput"
-        confirm-type="done"
-        bindconfirm="bindAdminAction"
-      />
       <view class="btn {{binding ? 'disabled' : ''}}" bindtap="bindAdminAction">
-        {{binding ? '绑定中…' : '我是摄影师'}}
+        {{binding ? '开通中…' : '我是摄影师'}}
       </view>
       <view wx:if="{{bindError}}" class="err">{{bindError}}</view>
-      <view class="tip">只需绑定一次，之后打开就是摄影师工作台</view>
+      <view class="tip">
+        点一下即可开通，之后打开小程序就是摄影师工作台<br />
+        你的项目只有你自己能看，其他摄影师互相看不到
+      </view>
     </view>
 
     <view class="block">
