@@ -73,6 +73,11 @@ Page({
     if (this.data.id) this.load()
   },
 
+  async onPullDownRefresh(this: any) {
+    await this.load()
+    ;(wx as any).stopPullDownRefresh()
+  },
+
   async load(this: any) {
     this.setData({ loading: true })
     const res = await getProject(this.data.id)

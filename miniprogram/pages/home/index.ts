@@ -26,14 +26,20 @@ Page({
   },
 
   async onShow(this: any) {
+    await this.boot()
+  },
+
+  /** 身份确认 + 加载列表。身份没就绪时绝不显示「还没有项目」空态 */
+  async boot(this: any, fromRetry = false) {
     let s = await waitForSession(3000)
-    // 云函数冷启动可能超过 3 秒：没等到就主动再查一次身份，别急着当路人
+    // 云函数冷启动可能很慢：没等到就主动再查一次身份，总共最多等 15 秒
     if (!s.ready) {
       const app: any = getApp()
       if (app && app.fetchIdentity) await app.fetchIdentity()
-      s = await waitForSession(4000)
+      s = await waitForSession(12000)
     }
     if (s.isAdmin) {
+      this.setData({ loadError: false })
       await this.loadProjects()
       return
     }
@@ -41,21 +47,22 @@ Page({
       ;(wx as any).redirectTo({ url: '/pages/model-home/index' })
       return
     }
-    if (!s.ready) {
-      // 网络确实失败：留在本页提示，而不是误导到口令页
-      ;(wx as any).showToast({ title: '网络不稳定，下拉重试', icon: 'none' })
+    if (!s.ready || !fromRetry) {
+      // 身份一直没就绪：显示明确的失败态（可点击重试），而不是伪装成「还没有项目」
+      this.setData({ loadError: true })
       return
     }
     ;(wx as any).redirectTo({ url: '/pages/guide/index' })
   },
 
   async onPullDownRefresh(this: any) {
-    await this.loadProjects()
+    await this.boot()
     ;(wx as any).stopPullDownRefresh()
   },
 
   retryLoad(this: any) {
-    this.loadProjects()
+    this.setData({ loadError: false })
+    this.boot(true)
   },
 
   async loadProjects(this: any, retried = false) {
