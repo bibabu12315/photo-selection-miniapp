@@ -1,6 +1,11 @@
 <view class="page">
   <view wx:if="{{loading && projects.length === 0}}" class="empty">加载中…</view>
 
+  <view wx:elif="{{loadError}}" class="empty" bindtap="retryLoad">
+    加载失败，网络不稳定
+    <view class="empty-sub">点此重试</view>
+  </view>
+
   <block wx:else>
     <view wx:if="{{projects.length === 0}}" class="empty">
       还没有项目

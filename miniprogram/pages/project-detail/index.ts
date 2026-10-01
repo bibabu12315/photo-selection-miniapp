@@ -146,11 +146,16 @@ Page({
   },
 
   copyUploadInfo(this: any) {
-    const text = `${this.data.uploadUrl}\n上传码：${this.data.code}`
+    const hasCode = !!this.data.code && this.data.code !== '——'
+    // 码直接拼进网址：浏览器粘贴一次 = 打开页面 + 自动填好上传码
+    const text = hasCode ? `${this.data.uploadUrl}?code=${this.data.code}` : this.data.uploadUrl
     ;(wx as any).setClipboardData({
       data: text,
       success: () => {
-        ;(wx as any).showToast({ title: '已复制，去电脑粘贴', icon: 'none' })
+        ;(wx as any).showToast({
+          title: hasCode ? '已复制，浏览器粘贴直接打开' : '已复制网址',
+          icon: 'none',
+        })
       },
     })
   },

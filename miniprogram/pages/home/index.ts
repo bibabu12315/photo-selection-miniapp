@@ -21,6 +21,7 @@ interface ProjectVM {
 Page({
   data: {
     loading: false,
+    loadError: false,
     projects: [] as ProjectVM[],
   },
 
@@ -53,14 +54,25 @@ Page({
     ;(wx as any).stopPullDownRefresh()
   },
 
-  async loadProjects(this: any) {
+  retryLoad(this: any) {
+    this.loadProjects()
+  },
+
+  async loadProjects(this: any, retried = false) {
     this.setData({ loading: true })
     const res = await listProjects()
     this.setData({ loading: false })
     if (!res.ok || !res.data) {
-      ;(wx as any).showToast({ title: res.error || '加载失败', icon: 'none' })
+      // 冷启动超时等瞬时失败自动重试一次；仍失败则给出明确的重试入口
+      if (!retried) {
+        await new Promise((r) => setTimeout(r, 800))
+        return this.loadProjects(true)
+      }
+      this.setData({ loadError: true })
+      ;(wx as any).showToast({ title: res.error || '加载失败，点页面重试', icon: 'none' })
       return
     }
+    this.setData({ loadError: false })
 
     const projects: ProjectVM[] = (res.data.projects || []).map((p: Project) => {
       const expired = daysLeft(p.expireAt) < 0

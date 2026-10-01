@@ -508,4 +508,23 @@ window.addEventListener('DOMContentLoaded', () => {
   })
 
   goStep(1)
+  prefillFromUrl()
 })
+
+/** 支持 ?code=123456 直达：从小程序复制「网址+码」粘贴打开时自动填码并验证 */
+function prefillFromUrl() {
+  const params = new URLSearchParams(window.location.search)
+  let code = (params.get('code') || '').replace(/\D/g, '')
+  if (!code && window.location.hash) {
+    const m = window.location.hash.match(/code=(\d{6})/)
+    if (m) code = m[1]
+  }
+  if (!/^\d{6}$/.test(code)) return
+
+  // 清掉地址栏里的参数，避免刷新/复制地址栏时重复携带旧码
+  history.replaceState(null, '', window.location.pathname)
+
+  const inputs = Array.from(document.querySelectorAll('#digits .digit'))
+  for (let i = 0; i < inputs.length; i++) inputs[i].value = code[i] || ''
+  setTimeout(verifyCode, 300)
+}
