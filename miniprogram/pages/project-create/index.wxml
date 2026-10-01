@@ -1,42 +1,65 @@
-<view class="container">
+<view class="page">
+  <view class="sect-title">基本信息</view>
+
   <view class="field">
     <text class="label">项目名称</text>
     <input
       class="input"
+      type="text"
+      placeholder="如：小王的夏日写真-2026.9"
+      maxlength="30"
       value="{{name}}"
       bindinput="onName"
-      placeholder="例如：小王 2026 夏日写真"
-      maxlength="30"
     />
   </view>
 
   <view class="field">
-    <text class="label">客户名称（选填）</text>
-    <input
-      class="input"
-      value="{{clientName}}"
-      bindinput="onClientName"
-      placeholder="例如：小王"
-      maxlength="30"
-    />
+    <text class="label">拍摄日期</text>
+    <picker mode="date" value="{{shootDate}}" bindchange="onShootDate">
+      <view class="value">{{shootDate}}</view>
+    </picker>
+  </view>
+
+  <view class="sect-title">分享与选片</view>
+
+  <view class="field">
+    <text class="label">有效期</text>
+    <picker
+      mode="selector"
+      range="{{expireOptions}}"
+      value="{{expireIndex}}"
+      bindchange="onExpire"
+    >
+      <view class="value">{{expireOptions[expireIndex]}}</view>
+    </picker>
   </view>
 
   <view class="field">
-    <text class="label">有效期（天）</text>
-    <input
-      class="input"
-      type="number"
-      value="{{expireDays}}"
-      bindinput="onExpireDays"
-      placeholder="30"
+    <text class="label">套餐张数</text>
+    <picker
+      mode="selector"
+      range="{{packageOptions}}"
+      value="{{packageIndex}}"
+      bindchange="onPackage"
+    >
+      <view class="value">{{packageOptions[packageIndex]}}</view>
+    </picker>
+  </view>
+  <view class="hint">模特选满后无法再勾选，底部会显示「已选 N / 上限 M」</view>
+
+  <view class="sect-title">备注（仅自己可见）</view>
+  <view class="field field-col">
+    <textarea
+      class="textarea"
+      placeholder="如：拍摄地点滨江公园，ARW 在 D 盘"
+      maxlength="200"
+      value="{{note}}"
+      bindinput="onNote"
+      auto-height="{{true}}"
     />
   </view>
 
   <view class="btn {{submitting ? 'disabled' : ''}}" bindtap="submit">
     {{submitting ? '创建中…' : '创建项目'}}
-  </view>
-
-  <view class="note">
-    创建后生成项目专属访问令牌。照片在电脑端上传页用「上传码」关联到这个项目。
   </view>
 </view>

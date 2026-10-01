@@ -1,18 +1,32 @@
+import { getProject } from '../../services/project'
 import { getResult, resetLock, ResultPhoto } from '../../services/selection'
+import { packageText, formatDate } from '../../utils/format'
+import { Project } from '../../types'
 
 /**
- * 摄影师端 · 选片结果
- * 列表展示选中照片（缩略图 + 文件名，按文件名升序与 Lightroom 对齐），
- * 支持复制全部文件名、重新开放选片。
+ * 摄影师端 · 选片结果（按模特分组）
+ * 顶部切换模特 → 看她选了哪些 → 复制文件名回 Lightroom 找 RAW
  */
+
+interface ModelTab {
+  modelId: string
+  name: string
+  label: string
+  active: boolean
+}
+
 Page({
   data: {
     id: '',
     loading: true,
+    pkg: '',
+    tabs: [] as ModelTab[],
+    currentModelId: '',
+    currentName: '',
     locked: false,
     selectedCount: 0,
+    submittedText: '',
     photos: [] as ResultPhoto[],
-    /** 视图模式：list（80px 缩略图 + 文件名）/ grid */
     view: 'list' as 'list' | 'grid',
     resetting: false,
   },
@@ -22,23 +36,62 @@ Page({
   },
 
   onShow(this: any) {
-    if (this.data.id) this.load()
+    if (this.data.id) this.loadProject()
   },
 
-  async load(this: any) {
+  async loadProject(this: any) {
     this.setData({ loading: true })
-    const res = await getResult(this.data.id)
+    const res = await getProject(this.data.id)
+    this.setData({ loading: false })
     if (!res.ok || !res.data) {
-      this.setData({ loading: false })
       ;(wx as any).showModal({ title: '加载失败', content: res.error || '', showCancel: false })
       return
     }
+    const p: Project = res.data.project
+    const models = p.models || []
+    const first = models[0]
+
     this.setData({
-      loading: false,
+      pkg: packageText(p.packageCount),
+      tabs: models.map((m, i) => ({
+        modelId: m.modelId,
+        name: m.name,
+        label: `${m.name} ${m.selectedCount} 张`,
+        active: i === 0,
+      })),
+      currentModelId: first ? first.modelId : '',
+    })
+
+    if (first) await this.loadResult(first.modelId)
+  },
+
+  async loadResult(this: any, modelId: string) {
+    this.setData({ loading: true })
+    const res = await getResult(this.data.id, modelId)
+    this.setData({ loading: false })
+    if (!res.ok || !res.data) {
+      ;(wx as any).showModal({ title: '加载失败', content: res.error || '', showCancel: false })
+      return
+    }
+    const name = (this.data.tabs.find((t: ModelTab) => t.modelId === modelId) || {} as ModelTab).name
+    this.setData({
       locked: res.data.locked,
       selectedCount: res.data.selectedCount,
+      submittedText: res.data.submittedAt ? formatDate(res.data.submittedAt) + ' 提交' : '',
       photos: res.data.photos,
+      currentName: name || '',
+      currentModelId: modelId,
     })
+  },
+
+  async switchModel(this: any, e: any) {
+    const modelId = e.currentTarget.dataset.id as string
+    if (!modelId || modelId === this.data.currentModelId) return
+    const tabs = this.data.tabs.map((t: ModelTab) =>
+      Object.assign({}, t, { active: t.modelId === modelId })
+    )
+    this.setData({ tabs })
+    await this.loadResult(modelId)
   },
 
   switchView(this: any) {
@@ -48,7 +101,7 @@ Page({
   copyAll(this: any) {
     const names = this.data.photos.map((p) => p.filename).join('\n')
     if (!names) {
-      ;(wx as any).showToast({ title: '暂无选片结果', icon: 'none' })
+      ;(wx as any).showToast({ title: '这位模特还没有选片', icon: 'none' })
       return
     }
     ;(wx as any).setClipboardData({
@@ -59,23 +112,24 @@ Page({
     })
   },
 
-  /** 重新开放选片：解锁 + 解绑模特微信 + 清空结果 */
+  /** 重新开放某位模特的选片 */
   reopen(this: any) {
+    if (!this.data.currentModelId) return
     ;(wx as any).showModal({
-      title: '重新开放选片？',
-      content: '将清空当前选片结果并解绑模特的微信账号，模特需要重新进入项目选片。',
+      title: `重新开放「${this.data.currentName}」的选片？`,
+      content: '会清空她当前的选择，她可以重新选一次（微信身份保留，不需要重新发链接）。',
       confirmText: '确认开放',
       success: async (r) => {
         if (!r.confirm) return
         this.setData({ resetting: true })
-        const res = await resetLock(this.data.id)
+        const res = await resetLock(this.data.id, this.data.currentModelId)
         this.setData({ resetting: false })
         if (!res.ok) {
           ;(wx as any).showModal({ title: '操作失败', content: res.error || '', showCancel: false })
           return
         }
         ;(wx as any).showToast({ title: '已重新开放', icon: 'success' })
-        this.load()
+        await this.loadResult(this.data.currentModelId)
       },
     })
   },

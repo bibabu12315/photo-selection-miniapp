@@ -1,18 +1,41 @@
 import { callSafe } from './request'
 
 /**
- * 选片相关 service
- * 模特端页面 → service → 云函数 selection → 数据库
+ * 选片相关 service（V2.0）
+ * 页面 → service → 云函数 selection → 数据库
  */
 
-export interface ClientProject {
+export interface WhoamiResult {
+  openid: string
+  isAdmin: boolean
+  isModel: boolean
+  displayName: string
+}
+
+export interface EntryResult {
   projectId: string
-  name: string
-  clientName: string
+  modelId: string
+  displayName: string
+  projectName: string
   photoCount: number
+  packageCount: number
   locked: boolean
-  selectedCount: number
   selectedIds: string[]
+}
+
+export interface MyProjectItem {
+  key: string
+  projectId: string
+  modelId: string
+  name: string
+  shootDate: number
+  photoCount: number
+  packageCount: number
+  expireAt: number
+  selectedCount: number
+  locked: boolean
+  expired: boolean
+  coverUrls: string[]
 }
 
 export interface ClientPhoto {
@@ -23,44 +46,61 @@ export interface ClientPhoto {
   thumbUrl: string
 }
 
-/** 模特进入项目（token 来自小程序码 scene 或分享卡片参数） */
-export async function clientEntry(token: string) {
-  return callSafe<ClientProject>('selection', { action: 'entry', token })
+/** 我是谁：摄影师 / 模特 / 路人 */
+export async function whoami() {
+  return callSafe<WhoamiResult>('selection', { action: 'whoami' })
 }
 
-/** 分页拉取照片 */
-export async function getPhotos(token: string, skip: number, limit = 18) {
-  return callSafe<{ photos: ClientPhoto[]; hasMore: boolean; locked: boolean }>('selection', {
-    action: 'getPhotos',
-    token,
-    skip,
-    limit,
+/**
+ * 进入选片页
+ * @param token 邀请 token（首次从链接进入）
+ * @param projectId + modelId 老模特从「我的拍摄」直接进
+ */
+export async function enterSelection(token: string, projectId = '', modelId = '') {
+  return callSafe<EntryResult>('selection', { action: 'entry', token, projectId, modelId })
+}
+
+/** 我的拍摄：该模特名下全部项目 */
+export async function myProjects() {
+  return callSafe<{ items: MyProjectItem[]; displayName: string }>('selection', {
+    action: 'myList',
   })
 }
 
-/** 单张预览图临时链接 */
-export async function getPreviewUrl(token: string, photoId: string) {
+/** 分页拉取照片 */
+export async function getPhotos(projectId: string, modelId: string, skip: number, limit = 18) {
+  return callSafe<{ photos: ClientPhoto[]; hasMore: boolean; locked: boolean; packageCount: number }>(
+    'selection',
+    { action: 'getPhotos', projectId, modelId, skip, limit }
+  )
+}
+
+/** 单张大图临时链接 */
+export async function getPreviewUrl(projectId: string, modelId: string, photoId: string) {
   return callSafe<{ photoId: string; filename: string; previewUrl: string }>('selection', {
     action: 'getPreview',
-    token,
+    projectId,
+    modelId,
     photoId,
   })
 }
 
-/** 保存选择（批量同步） */
-export async function saveSelection(token: string, photoIds: string[]) {
+/** 保存选择（防抖批量同步） */
+export async function saveSelection(projectId: string, modelId: string, photoIds: string[]) {
   return callSafe<{ saved: boolean; selectedCount: number }>('selection', {
     action: 'saveSelection',
-    token,
+    projectId,
+    modelId,
     photoIds,
   })
 }
 
 /** 提交并锁定 */
-export async function submitSelection(token: string, photoIds: string[]) {
+export async function submitSelection(projectId: string, modelId: string, photoIds: string[]) {
   return callSafe<{ locked: boolean; selectedCount: number }>('selection', {
     action: 'submitSelection',
-    token,
+    projectId,
+    modelId,
     photoIds,
   })
 }
@@ -73,15 +113,17 @@ export interface ResultPhoto {
   thumbUrl: string
 }
 
-export async function getResult(projectId: string) {
+/** 某位模特的选片结果 */
+export async function getResult(projectId: string, modelId: string) {
   return callSafe<{
     locked: boolean
     submittedAt: number
     selectedCount: number
     photos: ResultPhoto[]
-  }>('selection', { action: 'getResult', projectId })
+  }>('selection', { action: 'getResult', projectId, modelId })
 }
 
-export async function resetLock(projectId: string) {
-  return callSafe<{ reset: boolean }>('selection', { action: 'resetLock', projectId })
+/** 重新开放某位模特的选片 */
+export async function resetLock(projectId: string, modelId: string) {
+  return callSafe<{ reset: boolean }>('selection', { action: 'resetLock', projectId, modelId })
 }

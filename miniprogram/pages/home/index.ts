@@ -1,92 +1,104 @@
 import { waitForSession } from '../../utils/auth'
-import { listProjects, bindAdmin } from '../../services/project'
-import { statusText, formatDate } from '../../utils/format'
+import { listProjects } from '../../services/project'
+import { expireText, packageText, shootText, daysLeft } from '../../utils/format'
 import { Project } from '../../types'
+
+/**
+ * 摄影师端 · 我的项目
+ * 非摄影师按身份分流：模特 → 我的拍摄；路人 → 身份引导页
+ */
 
 interface ProjectVM {
   _id: string
   name: string
   meta: string
+  status: string
+  statusClass: string
+  modelsLine: string
+  expired: boolean
 }
 
 Page({
   data: {
-    openid: '',
-    isAdmin: false,
-    loginReady: false,
     loading: false,
     projects: [] as ProjectVM[],
-    key: '',
-    binding: false,
-    bindError: '',
   },
 
   async onShow(this: any) {
-    // 云函数冷启动可能晚于 onLoad，每次回前台都等一次登录态
-    const s = await waitForSession(3000)
-    this.setData({ openid: s.openid, isAdmin: s.isAdmin, loginReady: true })
+    let s = await waitForSession(3000)
+    // 云函数冷启动可能超过 3 秒：没等到就主动再查一次身份，别急着当路人
+    if (!s.ready) {
+      const app: any = getApp()
+      if (app && app.fetchIdentity) await app.fetchIdentity()
+      s = await waitForSession(4000)
+    }
     if (s.isAdmin) {
       await this.loadProjects()
+      return
     }
+    if (s.isModel) {
+      ;(wx as any).redirectTo({ url: '/pages/model-home/index' })
+      return
+    }
+    if (!s.ready) {
+      // 网络确实失败：留在本页提示，而不是误导到口令页
+      ;(wx as any).showToast({ title: '网络不稳定，下拉重试', icon: 'none' })
+      return
+    }
+    ;(wx as any).redirectTo({ url: '/pages/guide/index' })
   },
 
   async onPullDownRefresh(this: any) {
-    if (this.data.isAdmin) {
-      await this.loadProjects()
-    }
+    await this.loadProjects()
     ;(wx as any).stopPullDownRefresh()
   },
 
   async loadProjects(this: any) {
     this.setData({ loading: true })
     const res = await listProjects()
+    this.setData({ loading: false })
     if (!res.ok || !res.data) {
-      this.setData({ loading: false })
       ;(wx as any).showToast({ title: res.error || '加载失败', icon: 'none' })
       return
     }
-    const projects: ProjectVM[] = (res.data.projects || []).map((p: Project) => ({
-      _id: p._id as string,
-      name: p.name,
-      meta: [
-        p.clientName || '未填客户名',
-        `${p.photoCount || 0} 张`,
-        p.selectedCount ? `已选 ${p.selectedCount} 张` : '',
-        statusText(p.status),
-      ]
-        .filter(Boolean)
-        .join(' · '),
-    }))
-    this.setData({ loading: false, projects })
+
+    const projects: ProjectVM[] = (res.data.projects || []).map((p: Project) => {
+      const expired = daysLeft(p.expireAt) < 0
+      const models = p.models || []
+      const submitted = models.filter((m) => m.status === '已提交').length
+      let status = '待选片'
+      let statusClass = ''
+      if (expired) {
+        status = '已过期'
+        statusClass = 'red'
+      } else if (models.length && submitted === models.length) {
+        status = '已提交'
+        statusClass = 'green'
+      } else if (submitted > 0 || models.some((m) => m.status === '选片中')) {
+        status = '选片中'
+        statusClass = 'amber'
+      }
+
+      return {
+        _id: p._id as string,
+        name: p.name,
+        meta: `${shootText(p.shootDate)} · ${p.photoCount || 0} 张 · ${expireText(p.expireAt)}`,
+        status,
+        statusClass,
+        modelsLine: models.length
+          ? models
+              .map(
+                (m) =>
+                  `${m.name} ${m.status === '已提交' ? '已提交' : m.selectedCount + ' / ' + packageText(p.packageCount)}`
+              )
+              .join('　·　')
+          : '还没有邀请模特',
+        expired,
+      }
+    })
+
+    this.setData({ projects })
   },
-
-  /* ---------- 管理员绑定 ---------- */
-
-  onKeyInput(this: any, e: any) {
-    this.setData({ key: e.detail.value, bindError: '' })
-  },
-
-  async bindAdminAction(this: any) {
-    if (!this.data.key) {
-      this.setData({ bindError: '请输入口令' })
-      return
-    }
-    this.setData({ binding: true, bindError: '' })
-    const res = await bindAdmin(this.data.key)
-    if (!res.ok) {
-      this.setData({ binding: false, bindError: res.error || '绑定失败' })
-      return
-    }
-    // 绑定成功后刷新全局登录态
-    const app: any = getApp()
-    app.globalData.isAdmin = true
-    app.globalData.loginReady = true
-    this.setData({ binding: false, isAdmin: true })
-    ;(wx as any).showToast({ title: '绑定成功', icon: 'success' })
-    await this.loadProjects()
-  },
-
-  /* ---------- 导航 ---------- */
 
   goCreate(this: any) {
     ;(wx as any).navigateTo({ url: '/pages/project-create/index' })

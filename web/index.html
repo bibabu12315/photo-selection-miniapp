@@ -3,83 +3,117 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>选片 · 电脑端上传</title>
+  <title>摄影选片 · 电脑上传</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main>
-    <h1>选片 · 电脑端上传</h1>
-    <p class="sub">把相机里的 JPG 照片批量传进一个选片项目（ARW 请留在本地，精修源只用 RAW）</p>
-
-    <!-- 第 1 步：环境 -->
-    <section id="secEnv">
-      <label for="envId">第 1 步 · 云环境 ID（只需填一次，会记住）</label>
-      <div class="row">
-        <input id="envId" type="text" placeholder="cloud1-xxxxxxxx" autocomplete="off">
-        <button id="btnInit">连接</button>
+  <main class="wrap">
+    <header class="head">
+      <div class="brand">摄影选片 · 电脑上传</div>
+      <div class="steps" id="steps">
+        <span class="s on" data-step="1">1</span><span class="t on">上传码</span>
+        <span class="sep">›</span>
+        <span class="s" data-step="2">2</span><span class="t">选照片</span>
+        <span class="sep">›</span>
+        <span class="s" data-step="3">3</span><span class="t">上传</span>
       </div>
-      <p id="envStatus" class="hint"></p>
+    </header>
+
+    <!-- 第 1 步：上传码 -->
+    <section class="panel" id="step1">
+      <h2 class="title">输入上传码</h2>
+      <p class="desc">打开小程序 → 项目详情 →「去电脑上传」→ 复制那 6 位上传码</p>
+
+      <div class="digits" id="digits">
+        <input class="digit" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
+        <input class="digit" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
+        <input class="digit" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
+        <input class="digit" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
+        <input class="digit" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
+        <input class="digit" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
+      </div>
+      <p class="hint" id="codeHint">上传码 5 分钟内有效，过期请在小程序里刷新</p>
+      <button class="btn" id="btnVerify">下一步</button>
+      <p class="err" id="codeErr"></p>
     </section>
 
-    <!-- 第 2 步：上传码 -->
-    <section id="secCode" class="locked">
-      <label for="codeInput">第 2 步 · 输入小程序里的 6 位上传码（5 分钟有效）</label>
-      <div class="row">
-        <input id="codeInput" class="code-input" type="text" inputmode="numeric"
-               placeholder="●●●●●●" maxlength="6" autocomplete="off">
-        <button id="btnVerify" disabled>验证</button>
-      </div>
-      <p id="projectInfo" class="hint"></p>
-    </section>
+    <!-- 第 2 步：选照片 -->
+    <section class="panel hidden" id="step2">
+      <h2 class="title">选择照片</h2>
+      <p class="desc" id="projectInfo">已绑定项目</p>
 
-    <!-- 第 3 步：选照片 -->
-    <section id="secFiles" class="locked">
-      <label>第 3 步 · 把照片文件夹拖进来，或点击选择文件夹（只识别 JPG）</label>
-
-      <div id="dropZone">
-        <p><strong>拖到这里</strong>，或点击选择文件夹</p>
-        <p class="hint">支持整个 DCIM 文件夹 · 按 Ctrl 可多选 · ARW/其他格式会自动跳过</p>
+      <div id="dropZone" class="drop">
+        <p class="drop-main">把照片文件夹拖到这里</p>
+        <p class="drop-sub">或点击选择文件夹 · 只读取 JPG，ARW 自动跳过</p>
       </div>
       <input id="dirPicker" type="file" webkitdirectory multiple hidden>
       <input id="filePicker" type="file" accept=".jpg,.jpeg" multiple hidden>
 
-      <div id="fileSummary" class="hint hidden"></div>
-
       <div class="opts">
-        <label class="inline">预览质量
+        <label class="opt">
+          <span>预览规格</span>
           <select id="preset">
-            <option value="standard" selected>标准（长边 2048 · 约 500KB/张）</option>
-            <option value="hd">高清（长边 2880 · 流量较大）</option>
+            <option value="standard" selected>标准 2048</option>
+            <option value="hd">高清 2880</option>
             <option value="custom">自定义</option>
           </select>
         </label>
         <span id="customOpts" class="hidden">
-          <label class="inline">长边
-            <input id="longEdge" type="number" min="1200" max="4096" step="100" value="2048"> px
+          <label class="opt">
+            <span>长边</span>
+            <input id="longEdge" type="number" min="1200" max="4096" step="100" value="2048">
           </label>
-          <label class="inline">质量
+          <label class="opt">
+            <span>质量</span>
             <input id="quality" type="range" min="40" max="95" step="1" value="82">
             <span id="qualityVal">82%</span>
           </label>
         </span>
-        <label class="inline">水印文字
+        <label class="opt">
+          <span>水印</span>
           <input id="watermark" type="text" placeholder="留空则不加" maxlength="20">
         </label>
       </div>
 
+      <p class="summary" id="fileSummary"></p>
       <div class="row">
-        <button id="btnStart" disabled>开始上传</button>
-        <button id="btnRetry" class="ghost hidden">重试失败项</button>
-        <button id="btnClear" class="ghost hidden">清空列表</button>
-      </div>
-
-      <div id="stats" class="stats hidden"></div>
-      <div id="progress" class="progress hidden">
-        <div id="progressBar" class="progress-bar"></div>
+        <button class="btn" id="btnStart" disabled>开始上传</button>
+        <button class="btn ghost hidden" id="btnClear">清空</button>
       </div>
     </section>
 
-    <pre id="log" class="log"></pre>
+    <!-- 第 3 步：上传 -->
+    <section class="panel hidden" id="step3">
+      <h2 class="title">正在上传</h2>
+      <div class="row spread">
+        <span class="prog-text" id="progText">0 / 0</span>
+        <span class="prog-text" id="progPct">0%</span>
+      </div>
+      <div class="prog"><i id="progBar"></i></div>
+      <p class="summary" id="stats"></p>
+
+      <div class="wall" id="wall"></div>
+
+      <div class="row">
+        <button class="btn ghost" id="btnRetry" disabled>重试失败项</button>
+        <button class="btn ghost" id="btnBack2">继续添加</button>
+      </div>
+      <p class="err" id="failList"></p>
+    </section>
+
+    <!-- 完成 -->
+    <section class="panel hidden" id="stepDone">
+      <h2 class="title">上传完成</h2>
+      <p class="desc" id="doneText"></p>
+      <div class="card">
+        <p class="card-t">下一步</p>
+        <p class="card-d">打开小程序 → 该项目 →「② 模特」→ 邀请模特 → 发送链接</p>
+      </div>
+      <div class="row">
+        <button class="btn ghost" id="btnMore">继续上传</button>
+        <button class="btn" id="btnFinish">完成</button>
+      </div>
+    </section>
   </main>
 
   <script src="https://web-9gikcbug35bad3a8-1304825656.tcloudbaseapp.com/sdk/1.4.0/cloud.js"></script>

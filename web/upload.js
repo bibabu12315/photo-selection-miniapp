@@ -1,8 +1,9 @@
 /**
- * 电脑端上传页 · Phase 2
+ * 电脑端上传页（V2.0 三步向导）
  *
- * 流程：连接环境（匿名登录）→ 验证 6 位上传码 → 拖入/选择文件夹
- *       → canvas 压缩出 preview + thumbnail → 并发 3 上传 → 云函数登记照片
+ * 第 1 步：输入 6 位上传码（环境信息内置，摄影师不用管）
+ * 第 2 步：拖入 / 选择照片文件夹，选预览规格
+ * 第 3 步：上传进度 + 缩略图墙 + 失败重试 → 完成态
  *
  * 原则：
  * - 只上传 preview / thumbnail，原始 JPG 不上云（精修源永远是本地 RAW）
@@ -11,6 +12,7 @@
  */
 
 const CFG_KEY = 'photo_selection_env_id'
+const DEFAULT_ENV = 'cloud1-d2guu7uw1a306815a' // 云开发环境 ID（与 miniprogram/env.ts 一致）
 const WX_APPID = 'wxe950960fdf45e0b5' // 小程序 AppID，微信 Web SDK 必传
 const THUMB_LONG_EDGE = 480
 const THUMB_QUALITY = 0.75
@@ -22,129 +24,118 @@ const PRESETS = {
 }
 
 let app = null
-let signedIn = false
 let session = null // { projectId, projectName, uploadToken }
-let items = [] // { file, relPath, stem, status, error }
+let items = [] // { file, relPath, stem, status, error, url }
 let uploading = false
+let corsHintShown = false
 
 const $ = (id) => document.getElementById(id)
 
-/* ---------- 日志 ---------- */
+/* ---------- 步骤 ---------- */
 
-function log(msg) {
-  const el = $('log')
-  el.textContent += msg + '\n'
-  el.scrollTop = el.scrollHeight
-  console.log(msg)
+function goStep(n) {
+  ;[1, 2, 3].forEach((i) => {
+    $('step' + i).classList.toggle('hidden', i !== n)
+  })
+  $('stepDone').classList.add('hidden')
+  document.querySelectorAll('#steps .s').forEach((el) => {
+    el.classList.toggle('on', Number(el.dataset.step) <= n)
+  })
+  document.querySelectorAll('#steps .t').forEach((el) => {
+    el.classList.toggle('on', Number(el.previousElementSibling.dataset.step) <= n)
+  })
 }
 
-function describe(err) {
-  if (!err) return '未知错误'
-  let m = err.message || err.errMsg || String(err)
-  try {
-    const keys = Object.keys(err)
-    if (keys.length) {
-      const o = {}
-      keys.forEach((k) => {
-        o[k] = err[k]
-      })
-      m += ' | ' + JSON.stringify(o).slice(0, 400)
-    }
-  } catch (e) {
-    /* 忽略序列化失败 */
-  }
-  return m
+function showDone(done, failed, total) {
+  ;[1, 2, 3].forEach((i) => $('step' + i).classList.add('hidden'))
+  $('stepDone').classList.remove('hidden')
+  $('doneText').textContent =
+    `共 ${total} 张，成功 ${done} 张` + (failed ? `，失败 ${failed} 张（可点「继续上传」重来）` : '')
 }
 
-/* ---------- 第 1 步：环境连接（微信 Web SDK，未登录模式，无需登录态） ---------- */
+/* ---------- 微信 Web SDK ---------- */
 
-async function init() {
-  const env = $('envId').value.trim()
-  if (!env || env === 'your-env-id') {
-    setEnvStatus('请先填写云环境 ID（小程序 miniprogram/env.ts 里的那一串）', 'err')
-    return
-  }
+function currentEnv() {
+  const q = new URLSearchParams(location.search).get('env')
+  return q || localStorage.getItem(CFG_KEY) || DEFAULT_ENV
+}
+
+async function ensureApp() {
+  if (app) return app
+  if (typeof cloud === 'undefined') throw new Error('微信 Web SDK 未加载，请检查网络')
+  const env = currentEnv()
   localStorage.setItem(CFG_KEY, env)
-
-  if (typeof cloud === 'undefined') {
-    setEnvStatus('微信 Web SDK 未加载，请检查网络', 'err')
-    return
-  }
-
-  $('btnInit').disabled = true
-  try {
-    // 微信 Web SDK 正确初始化方式：new cloud.Cloud（未登录模式）
-    // cloud.init({appid,env}) 传 appid 不生效，会报 missing appid
-    app = new cloud.Cloud({
-      identityless: true,
-      resourceAppid: WX_APPID,
-      resourceEnv: env,
-    })
-    await app.init()
-    signedIn = true
-    setEnvStatus('已连接，进入下一步', 'ok')
-    unlock('secCode')
-    $('btnVerify').disabled = false
-  } catch (err) {
-    signedIn = false
-    $('btnInit').disabled = false
-    setEnvStatus('连接失败：' + describe(err), 'err')
-    log('常见原因：1) 环境 ID 抄错 2) 设置-权限设置 未开「未登录用户访问云资源」')
-  }
+  app = new cloud.Cloud({
+    identityless: true,
+    resourceAppid: WX_APPID,
+    resourceEnv: env,
+  })
+  await app.init()
+  return app
 }
-
-function setEnvStatus(msg, cls) {
-  const el = $('envStatus')
-  el.textContent = msg
-  el.className = 'hint' + (cls ? ' ' + cls : '')
-}
-
-/* ---------- 微信 Web SDK 调用封装 ---------- */
 
 function callFn(name, data) {
-  // Cloud 实例的 callFunction 直接返回 Promise
   return app.callFunction({ name, data })
 }
 
-/* ---------- 第 2 步：验证上传码 ---------- */
+/* ---------- 第 1 步：上传码 ---------- */
+
+function codeValue() {
+  return Array.from(document.querySelectorAll('#digits .digit'))
+    .map((i) => i.value)
+    .join('')
+}
+
+function setupDigits() {
+  const inputs = Array.from(document.querySelectorAll('#digits .digit'))
+  inputs.forEach((el, idx) => {
+    el.addEventListener('input', () => {
+      el.value = el.value.replace(/\D/g, '').slice(0, 1)
+      if (el.value && idx < inputs.length - 1) inputs[idx + 1].focus()
+      if (codeValue().length === 6) verifyCode()
+    })
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !el.value && idx > 0) inputs[idx - 1].focus()
+      if (e.key === 'Enter') verifyCode()
+    })
+    el.addEventListener('paste', (e) => {
+      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '')
+      if (!text) return
+      e.preventDefault()
+      for (let i = 0; i < inputs.length; i++) inputs[i].value = text[i] || ''
+      inputs[Math.min(text.length, inputs.length - 1)].focus()
+      if (text.length >= 6) verifyCode()
+    })
+  })
+}
 
 async function verifyCode() {
-  const code = $('codeInput').value.trim()
+  const code = codeValue()
+  $('codeErr').textContent = ''
   if (!/^\d{6}$/.test(code)) {
-    setProjectInfo('请输入 6 位数字上传码', 'err')
+    $('codeErr').textContent = '请输入 6 位数字上传码'
     return
   }
-
   $('btnVerify').disabled = true
   try {
+    await ensureApp()
     const res = await callFn('photo', { action: 'verifyCode', code })
     const body = res && res.result
     if (!body || !body.ok) {
-      setProjectInfo(body && body.error ? body.error : '验证失败', 'err')
+      $('codeErr').textContent = (body && body.error) || '验证失败'
       $('btnVerify').disabled = false
       return
     }
     session = body.data
-    setProjectInfo(
-      `项目「${session.projectName}」验证成功，24 小时内可直接上传。开始选照片 ↓`,
-      'ok'
-    )
-    unlock('secFiles')
-    log('已绑定项目: ' + session.projectId + '（' + session.projectName + '）')
+    $('projectInfo').textContent = `项目「${session.projectName}」· 24 小时内可直接上传`
+    goStep(2)
   } catch (err) {
-    setProjectInfo('调用云函数失败：' + describe(err), 'err')
-    log('若提示函数不存在，请先在小程序开发者工具里部署 photo 云函数')
+    $('codeErr').textContent = '调用云函数失败：' + (err && err.message ? err.message : String(err))
     $('btnVerify').disabled = false
   }
 }
 
-function setProjectInfo(msg, cls) {
-  const el = $('projectInfo')
-  el.textContent = msg
-  el.className = 'hint' + (cls ? ' ' + cls : '')
-}
-
-/* ---------- 第 3 步：收集照片文件 ---------- */
+/* ---------- 第 2 步：选照片 ---------- */
 
 const JPG_RE = /\.(jpe?g)$/i
 
@@ -154,45 +145,46 @@ function stemOf(name) {
 
 function collectFiles(fileList) {
   const list = Array.from(fileList)
-  const skipped = { count: 0 }
+  let skipped = 0
   for (const f of list) {
     if (!JPG_RE.test(f.name)) {
-      skipped.count++
+      skipped++
       continue
     }
     const relPath = f.webkitRelativePath || f.name
+    if (items.some((i) => i.relPath === relPath)) continue
     items.push({
       file: f,
       relPath,
       stem: stemOf(f.name),
       status: 'waiting', // waiting | working | done | failed
       error: '',
+      url: URL.createObjectURL(f),
     })
   }
-  if (skipped.count > 0) log('已跳过 ' + skipped.count + ' 个非 JPG 文件（ARW 等留在本地即可）')
-  dedupeItems()
   sortItems()
-  renderFiles()
+  renderFiles(skipped)
 }
 
-/** 同名同路径去重（重复拖拽时以后来的为准） */
-function dedupeItems() {
-  const seen = new Map()
-  for (const it of items) seen.set(it.relPath, it)
-  items = Array.from(seen.values())
-}
-
-/** 按文件名自然排序（DSC00002 排在 DSC00010 前面），保证 sortOrder 与相机序号一致 */
+/** 按文件名自然排序，保证 sortOrder 与相机序号一致 */
 function sortItems() {
   const collator = new Intl.Collator('en', { numeric: true })
   items.sort((a, b) => collator.compare(a.stem, b.stem))
 }
 
-/* ---------- 拖拽与选择 ---------- */
+function renderFiles(skipped) {
+  const total = items.length
+  const folders = new Set(items.map((i) => i.relPath.split('/')[0]))
+  $('fileSummary').textContent =
+    `已选 ${total} 张` +
+    (folders.size > 1 ? `，来自 ${folders.size} 个文件夹` : '') +
+    (skipped ? ` · 已跳过 ${skipped} 个非 JPG（ARW 留在本地）` : '')
+  $('btnStart').disabled = uploading || total === 0
+  $('btnClear').classList.toggle('hidden', total === 0)
+}
 
 function setupPickers() {
   const dz = $('dropZone')
-
   dz.addEventListener('click', () => $('dirPicker').click())
 
   $('dirPicker').addEventListener('change', (e) => {
@@ -219,7 +211,6 @@ function setupPickers() {
 
   dz.addEventListener('drop', async (e) => {
     const dropped = []
-    // webkitGetAsEntry 必须在事件同步阶段全部取出
     const entries = []
     for (const item of e.dataTransfer.items) {
       const entry = item.webkitGetAsEntry && item.webkitGetAsEntry()
@@ -238,12 +229,11 @@ async function traverseEntry(entry, out, path) {
   if (entry.isFile) {
     const file = await new Promise((res, rej) => entry.file(res, rej))
     out.push(file)
-    // File 对象的 webkitRelativePath 为空，用路径补上
     if (!file.webkitRelativePath) {
       try {
         Object.defineProperty(file, 'webkitRelativePath', { value: path + entry.name })
       } catch (e) {
-        /* 某些浏览器不可写则忽略，退化为纯文件名 */
+        /* 某些浏览器不可写则忽略 */
       }
     }
   } else if (entry.isDirectory) {
@@ -271,67 +261,16 @@ function readAllEntries(reader) {
   })
 }
 
-/* ---------- 列表渲染 ---------- */
-
-function renderFiles() {
-  const total = items.length
-  const summary = $('fileSummary')
-  if (total === 0) {
-    summary.classList.add('hidden')
-    $('btnStart').disabled = true
-    $('btnClear').classList.add('hidden')
-    $('stats').classList.add('hidden')
-    $('progress').classList.add('hidden')
-    return
-  }
-
-  const folders = new Set(items.map((i) => i.relPath.split('/')[0]))
-  summary.classList.remove('hidden')
-  summary.textContent =
-    `已选 ${total} 张` + (folders.size > 1 ? `，来自 ${folders.size} 个文件夹` : '')
-  $('btnStart').disabled = uploading
-  $('btnClear').classList.remove('hidden')
-  $('btnRetry').classList.toggle('hidden', !items.some((i) => i.status === 'failed'))
-  renderStats()
-}
-
-function renderStats() {
-  const done = items.filter((i) => i.status === 'done').length
-  const failed = items.filter((i) => i.status === 'failed').length
-  const working = items.filter((i) => i.status === 'working').length
-  const waiting = items.filter((i) => i.status === 'waiting').length
-  const total = items.length
-
-  const el = $('stats')
-  el.classList.remove('hidden')
-  el.innerHTML =
-    `共 ${total} · ` +
-    `<span class="ok">成功 ${done}</span> · ` +
-    (failed ? `<span class="err-c">失败 ${failed}</span> · ` : '') +
-    `上传中 ${working} · 等待 ${waiting}` +
-    (uploading ? '（上传中请勿关闭页面）' : '')
-
-  $('progress').classList.toggle('hidden', total === 0)
-  $('progressBar').style.width = Math.round(((done + failed) / total) * 100) + '%'
-  $('btnRetry').classList.toggle('hidden', uploading || failed === 0)
-  $('btnStart').disabled = uploading || waiting + failed === 0
-  $('btnClear').disabled = uploading
-}
-
-/* ---------- 第 4 步：上传 ---------- */
+/* ---------- 第 3 步：上传 ---------- */
 
 async function startUpload() {
-  if (!session) {
-    log('请先验证上传码')
-    return
-  }
-  if (uploading) return
+  if (!session || uploading) return
   uploading = true
+  goStep(3)
+  buildWall()
   renderStats()
 
   const spec = currentSpec()
-  log(`开始上传：${items.length} 张 · 预览长边 ${spec.longEdge}px · 质量 ${Math.round(spec.quality * 100)}%`)
-
   let cursor = 0
   const worker = async () => {
     while (true) {
@@ -343,35 +282,30 @@ async function startUpload() {
   await Promise.all(Array.from({ length: CONCURRENCY }, worker))
 
   uploading = false
-  const failed = items.filter((i) => i.status === 'failed').length
-  const done = items.filter((i) => i.status === 'done').length
-  log(`上传结束：成功 ${done}，失败 ${failed}` + (failed ? '（点「重试失败项」重传）' : ''))
   renderStats()
+
+  const failed = items.filter((i) => i.status === 'failed')
+  if (failed.length === 0) {
+    showDone(items.length, 0, items.length)
+  } else {
+    $('failList').textContent =
+      `${failed.length} 张失败：` + failed.slice(0, 5).map((i) => i.stem).join('、')
+  }
 }
 
 async function processOne(item, spec) {
   item.status = 'working'
-  item.error = ''
   renderStats()
   try {
-    // 1. 解码一次，压出 preview + thumbnail
     const bmp = await decode(item.file)
     const preview = await render(bmp, spec.longEdge, spec.quality)
     const thumb = await render(bmp, THUMB_LONG_EDGE, THUMB_QUALITY)
     if (bmp.close) bmp.close()
 
-    // 2. 上传两图（私有存储，只有云函数能发链接）
     const safe = sanitizeStem(item.stem)
-    const previewUp = await uploadBlob(
-      preview.blob,
-      `p/${session.projectId}/preview/${safe}.jpg`
-    )
-    const thumbUp = await uploadBlob(
-      thumb.blob,
-      `p/${session.projectId}/thumb/${safe}.jpg`
-    )
+    const previewUp = await uploadBlob(preview.blob, `p/${session.projectId}/preview/${safe}.jpg`)
+    const thumbUp = await uploadBlob(thumb.blob, `p/${session.projectId}/thumb/${safe}.jpg`)
 
-    // 3. 云函数登记（云端核验文件真实存在后才入库；同名 stem 自动覆盖）
     const res = await callFn('photo', {
       action: 'registerPhoto',
       projectId: session.projectId,
@@ -387,43 +321,69 @@ async function processOne(item, spec) {
       thumbBytes: thumb.blob.size,
     })
     const body = res && res.result
-    if (!body || !body.ok) throw new Error(body && body.error ? body.error : '登记失败')
+    if (!body || !body.ok) throw new Error((body && body.error) || '登记失败')
 
     item.status = 'done'
   } catch (err) {
     item.status = 'failed'
-    item.error = describe(err)
-    log(`✗ ${item.stem}: ${item.error}`)
+    item.error = err && err.message ? err.message : String(err)
   }
   renderStats()
 }
 
-let corsHintShown = false
-
 async function uploadBlob(blob, cloudPath) {
-  // 微信 Web SDK：web 端必须传 file 参数（File 对象），不是 filePath
   const name = cloudPath.split('/').pop() || 'photo.jpg'
   const file = new File([blob], name, { type: 'image/jpeg' })
   try {
-    const res = await app.uploadFile({ cloudPath, file })
-    if (res && res.fileID) return { cloudPath, verified: true }
+    await app.uploadFile({ cloudPath, file })
   } catch (e) {
-    // 已知坑：本环境存储桶不给 localhost 返回 CORS 头。文件可能已实际到达服务器（204），
-    // 只是浏览器读不到响应。是否真传成功由 registerPhoto 云函数核验，这里不中断流程。
+    // 已知坑：本环境存储桶不给 localhost 返回 CORS 头，浏览器读不到响应，
+    // 但文件可能已实际到达服务器（204）。是否真传成功由 registerPhoto 云端核验。
     if (!corsHintShown) {
       corsHintShown = true
-      log('提示：浏览器被跨域限制挡住读不到上传响应，上传结果改由云端核验…')
+      $('failList').textContent = '提示：上传结果由云端核验，跨域提示不影响实际上传。'
     }
   }
-  return { cloudPath, verified: false }
+  return { cloudPath }
+}
+
+function buildWall() {
+  const wall = $('wall')
+  wall.innerHTML = ''
+  items.forEach((it) => {
+    const img = document.createElement('img')
+    img.src = it.url
+    img.alt = it.stem
+    it.el = img
+    wall.appendChild(img)
+  })
+}
+
+function renderStats() {
+  const total = items.length
+  const done = items.filter((i) => i.status === 'done').length
+  const failed = items.filter((i) => i.status === 'failed').length
+  const working = items.filter((i) => i.status === 'working').length
+
+  $('progText').textContent = `${done + failed} / ${total}`
+  $('progPct').textContent = total ? Math.round(((done + failed) / total) * 100) + '%' : '0%'
+  $('progBar').style.width = total ? ((done + failed) / total) * 100 + '%' : '0'
+  $('stats').textContent =
+    `成功 ${done}` + (failed ? ` · 失败 ${failed}` : '') + (working ? ` · 上传中 ${working}` : '')
+
+  items.forEach((it) => {
+    if (!it.el) return
+    it.el.className = it.status === 'done' ? 'done' : it.status === 'failed' ? 'failed' : ''
+  })
+
+  $('btnRetry').disabled = uploading || failed === 0
+  $('btnBack2').disabled = uploading
 }
 
 async function retryFailed() {
   if (uploading) return
-  for (const it of items) {
-    if (it.status === 'failed') it.status = 'waiting'
-  }
-  log('重试失败项…')
+  for (const it of items) if (it.status === 'failed') it.status = 'waiting'
+  $('failList').textContent = ''
   await startUpload()
 }
 
@@ -437,19 +397,18 @@ function currentSpec() {
       quality: clamp(parseInt($('quality').value, 10) || 82, 40, 95) / 100,
     }
   }
-  return { ...PRESETS[v] }
+  return Object.assign({}, PRESETS[v])
 }
 
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n))
 }
 
-/** 解码，优先 createImageBitmap 并按 EXIF 方向摆正（照片不会躺倒） */
+/** 解码，优先 createImageBitmap 并按 EXIF 方向摆正 */
 async function decode(file) {
   try {
     return await createImageBitmap(file, { imageOrientation: 'from-image' })
   } catch (e) {
-    // 退化路径：<img> 在现代浏览器里也会自动按 EXIF 摆正
     return new Promise((res, rej) => {
       const img = new Image()
       const url = URL.createObjectURL(file)
@@ -487,10 +446,9 @@ async function render(source, longEdge, quality) {
   return { blob, width: w, height: h }
 }
 
-/** 右下角半透明文字水印，随图宽自适应 */
 function drawWatermark(ctx, w, h, text) {
   const size = Math.max(14, Math.round(Math.min(w, h) * 0.03))
-  ctx.font = `${size}px -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif`
+  ctx.font = `${size}px -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif`
   ctx.textAlign = 'right'
   ctx.textBaseline = 'bottom'
   ctx.globalAlpha = 0.45
@@ -511,37 +469,36 @@ function sanitizeStem(stem) {
   )
 }
 
-/* ---------- 其他控件 ---------- */
-
-function clearList() {
-  if (uploading) return
-  items = []
-  renderFiles()
-  log('已清空列表（云端已登记的照片不受影响）')
-}
-
-function unlock(id) {
-  const el = $(id)
-  el.classList.remove('locked')
-  el.classList.add('unlocked')
-}
-
 /* ---------- 绑定 ---------- */
 
 window.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem(CFG_KEY)
-  if (saved) $('envId').value = saved
-
-  $('btnInit').addEventListener('click', init)
-  $('btnVerify').addEventListener('click', verifyCode)
-  $('codeInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') verifyCode()
-  })
-  $('codeInput').addEventListener('input', (e) => {
-    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6)
-  })
-
+  setupDigits()
   setupPickers()
+
+  $('btnVerify').addEventListener('click', verifyCode)
+  $('btnStart').addEventListener('click', startUpload)
+  $('btnRetry').addEventListener('click', retryFailed)
+  $('btnBack2').addEventListener('click', () => {
+    if (uploading) return
+    goStep(2)
+  })
+  $('btnClear').addEventListener('click', () => {
+    if (uploading) return
+    items.forEach((i) => URL.revokeObjectURL(i.url))
+    items = []
+    renderFiles(0)
+  })
+  $('btnMore').addEventListener('click', () => {
+    items = items.filter((i) => i.status !== 'done')
+    renderFiles(0)
+    goStep(2)
+  })
+  $('btnFinish').addEventListener('click', () => {
+    items = []
+    session = null
+    Array.from(document.querySelectorAll('#digits .digit')).forEach((i) => (i.value = ''))
+    goStep(1)
+  })
 
   $('preset').addEventListener('change', () => {
     $('customOpts').classList.toggle('hidden', $('preset').value !== 'custom')
@@ -550,7 +507,5 @@ window.addEventListener('DOMContentLoaded', () => {
     $('qualityVal').textContent = $('quality').value + '%'
   })
 
-  $('btnStart').addEventListener('click', startUpload)
-  $('btnRetry').addEventListener('click', retryFailed)
-  $('btnClear').addEventListener('click', clearList)
+  goStep(1)
 })

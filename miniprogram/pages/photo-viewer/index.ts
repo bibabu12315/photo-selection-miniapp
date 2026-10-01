@@ -23,7 +23,8 @@ Page({
     locked: false,
   },
 
-  token: '',
+  projectId: '',
+  modelId: '',
   cache: {} as Record<string, string>,
   channel: null as any,
 
@@ -32,7 +33,8 @@ Page({
     if (!ch || !ch.on) return
     this.channel = ch
     ch.on('init', (payload: any) => {
-      this.token = payload.token
+      this.projectId = payload.projectId
+      this.modelId = payload.modelId
       const photos: ViewerPhoto[] = payload.photos || []
       this.setData({
         ready: true,
@@ -71,7 +73,7 @@ Page({
       return
     }
     this.setData({ loadingPreview: true })
-    const res = await getPreviewUrl(this.token, photo._id)
+    const res = await getPreviewUrl(this.projectId, this.modelId, photo._id)
     if (res.ok && res.data && res.data.previewUrl) {
       this.cache[photo._id] = res.data.previewUrl
       if (this.data.photos[this.data.current] && this.data.photos[this.data.current]._id === photo._id) {
@@ -88,7 +90,7 @@ Page({
   preloadNeighbor(this: any) {
     const next = this.data.photos[this.data.current + 1]
     if (next && !this.cache[next._id]) {
-      getPreviewUrl(this.token, next._id).then((res) => {
+      getPreviewUrl(this.projectId, this.modelId, next._id).then((res) => {
         if (res.ok && res.data && res.data.previewUrl) this.cache[next._id] = res.data.previewUrl
       })
     }

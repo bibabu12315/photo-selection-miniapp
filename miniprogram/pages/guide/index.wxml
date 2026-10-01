@@ -1,0 +1,40 @@
+<view class="wrap">
+  <view class="logo">摄影选片</view>
+  <view class="slogan">摄影师与模特的选片工具</view>
+  <view class="desc">
+    摄影师在电脑上建项目、传照片<br />
+    模特在微信里看图、选片、提交
+  </view>
+
+  <view wx:if="{{checking}}" class="block">
+    <view class="tip">正在确认身份…</view>
+  </view>
+
+  <block wx:else>
+    <view class="block">
+      <input
+        class="input"
+        type="text"
+        placeholder="摄影师口令"
+        password="{{true}}"
+        value="{{key}}"
+        bindinput="onKeyInput"
+        confirm-type="done"
+        bindconfirm="bindAdminAction"
+      />
+      <view class="btn {{binding ? 'disabled' : ''}}" bindtap="bindAdminAction">
+        {{binding ? '绑定中…' : '我是摄影师'}}
+      </view>
+      <view wx:if="{{bindError}}" class="err">{{bindError}}</view>
+      <view class="tip">只需绑定一次，之后打开就是摄影师工作台</view>
+    </view>
+
+    <view class="block">
+      <view class="btn ghost">我是模特</view>
+      <view class="tip">
+        请使用摄影师通过微信发给你的链接或二维码进入<br />
+        首次进入后，这个微信号会自动记住你，以后打开小程序就能看到你的全部拍摄
+      </view>
+    </view>
+  </block>
+</view>

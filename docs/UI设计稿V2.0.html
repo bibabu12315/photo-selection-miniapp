@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>摄影选片小程序 V2.0 · UI 设计稿</title>
+<style>
+  :root{
+    --ink:#1A1A1A; --ink2:#4A4A4A; --ink3:#8A8A8A; --line:#E8E8E8;
+    --bg:#FFFFFF; --page:#F6F6F6; --chip:#F2F2F2;
+    --green:#1D9E75; --amber:#BA7517; --red:#E24B4A; --gray:#888780;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#FAFAFA;color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    font-size:13px;line-height:1.6;padding:32px 24px 80px}
+  h1{font-size:20px;font-weight:600;margin-bottom:6px}
+  .sub{color:var(--ink3);font-size:13px;margin-bottom:28px}
+  h2{font-size:16px;font-weight:600;margin:40px 0 6px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  h2 .tag{font-size:12px;font-weight:400;color:var(--ink3);margin-left:8px}
+  h3{font-size:13px;font-weight:600;margin:24px 0 10px;color:var(--ink2)}
+  .grid{display:flex;flex-wrap:wrap;gap:26px}
+  .cell{width:300px}
+  .cell-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .cell-head b{font-size:13px;font-weight:600}
+  .cell-head span{font-size:11px;color:var(--ink3)}
+  .notes{font-size:12px;color:var(--ink2);margin-top:10px;padding-left:14px}
+  .notes li{margin-bottom:3px}
+
+  .phone{width:300px;height:620px;background:#fff;border-radius:22px;border:1px solid #DCDCDC;
+    box-shadow:0 2px 10px rgba(0,0,0,.06);overflow:hidden;display:flex;flex-direction:column}
+  .status{height:26px;background:#fff;display:flex;align-items:center;justify-content:space-between;
+    padding:0 14px;font-size:10px;color:var(--ink3);flex:none}
+  .navbar{height:42px;display:flex;align-items:center;justify-content:center;position:relative;
+    border-bottom:1px solid var(--line);font-size:13px;font-weight:600;flex:none;background:#fff}
+  .navbar .r{position:absolute;right:12px;font-size:11px;font-weight:400;color:var(--ink)}
+  .navbar .l{position:absolute;left:12px;font-size:15px;color:var(--ink)}
+  .body{flex:1;overflow:hidden;background:var(--page);padding:12px;display:flex;flex-direction:column;gap:10px}
+  .dark{background:#111;color:#fff}
+  .dark .navbar{background:#111;border-bottom:1px solid #2A2A2A;color:#fff}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px}
+  .card .t{font-size:13px;font-weight:600}
+  .card .m{font-size:11px;color:var(--ink3);margin-top:3px}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .chip{font-size:10px;padding:2px 7px;border-radius:20px;background:var(--chip);color:var(--ink2)}
+  .chip.g{background:#E1F5EE;color:var(--green)} .chip.a{background:#FAEEDA;color:var(--amber)}
+  .chip.r{background:#FCEBEB;color:var(--red)} .chip.i{background:#1A1A1A;color:#fff}
+  .btn{background:#1A1A1A;color:#fff;border-radius:8px;padding:9px 12px;text-align:center;font-size:12px;font-weight:500}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid #D8D8D8}
+  .btn.mini{padding:5px 9px;font-size:11px;border-radius:6px}
+  .btn.dis{background:#E6E6E6;color:#A8A8A8}
+  .sect{font-size:11px;color:var(--ink3);margin:2px 0 -2px;letter-spacing:.4px}
+  .hr{height:1px;background:var(--line);margin:2px 0}
+  .field{background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:12px;color:var(--ink);
+    display:flex;justify-content:space-between;align-items:center}
+  .field label{font-size:11px;color:var(--ink3)}
+  .field .v{font-size:12px}
+  .thumb{background:#EDEDED;border-radius:6px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+  .grid3 .thumb{aspect-ratio:1;position:relative}
+  .grid3 .thumb.on{border:2px solid #fff}
+  .check{position:absolute;right:4px;bottom:4px;width:14px;height:14px;border-radius:50%;background:#1A1A1A;border:1.5px solid #fff}
+  .check.on{background:#fff}
+  .check span{display:block;width:100%;height:100%;border-radius:50%}
+  .check.on span{background:#1A1A1A;transform:scale(.5)}
+  .bottombar{margin:0 -12px -12px;padding:10px 12px;border-top:1px solid var(--line);background:#fff;display:flex;align-items:center;gap:10px}
+  .bottombar .txt{font-size:11px;color:var(--ink2);flex:1}
+  .bottombar .btn{flex:none;padding:8px 16px}
+
+  .modalwrap{position:relative;flex:1;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:12px}
+  .modal{background:#fff;border-radius:12px;padding:16px;width:100%}
+  .modal .tt{font-size:13px;font-weight:600;margin-bottom:4px}
+  .modal .dd{font-size:11px;color:var(--ink3);margin-bottom:10px}
+  .codebox{background:#F6F6F6;border:1px dashed #D8D8D8;border-radius:8px;padding:12px;text-align:center;margin-bottom:6px}
+  .codebox .num{font-size:26px;font-weight:600;letter-spacing:5px}
+  .urlbox{background:#F6F6F6;border-radius:6px;padding:8px;font-size:10px;color:var(--ink2);word-break:break-all;margin-bottom:10px}
+
+  .browser{width:420px;border:1px solid #DCDCDC;border-radius:10px;overflow:hidden;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+  .browser .bar{height:28px;background:#F0F0F0;display:flex;align-items:center;gap:6px;padding:0 10px;border-bottom:1px solid #E0E0E0}
+  .dot{width:8px;height:8px;border-radius:50%;background:#D0D0D0}
+  .browser .url{flex:1;background:#fff;border-radius:4px;height:16px;font-size:9px;color:var(--ink3);display:flex;align-items:center;padding:0 8px}
+  .bpage{padding:20px;min-height:330px;display:flex;flex-direction:column;gap:14px}
+  .steps{display:flex;gap:6px;align-items:center;font-size:11px;color:var(--ink3)}
+  .steps .s{width:18px;height:18px;border-radius:50%;background:#EDEDED;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff}
+  .steps .s.on{background:#1A1A1A}
+  .drop{border:1.5px dashed #C8C8C8;border-radius:10px;padding:26px 16px;text-align:center;color:var(--ink3);font-size:12px;background:#FCFCFC}
+  .digits{display:flex;gap:8px;justify-content:center}
+  .digit{width:34px;height:42px;border:1px solid #D8D8D8;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600}
+  .digit.f{background:#F6F6F6}
+  .prog{height:6px;background:#EDEDED;border-radius:3px;overflow:hidden}
+  .prog i{display:block;height:100%;background:#1A1A1A;width:68%}
+
+  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px;background:#fff}
+  th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+  th{background:#F6F6F6;font-weight:600;width:130px}
+  .sw{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}
+  .sw div{width:96px}
+  .sw i{display:block;height:34px;border-radius:6px;border:1px solid var(--line);margin-bottom:4px}
+  .sw span{font-size:11px;color:var(--ink2)}
+</style>
+</head>
+<body>
+
+<h1>摄影选片小程序 · UI 设计稿 V2.0</h1>
+<div class="sub">2026-10-01 · 与 <code>docs/产品方案V2.0-双端重构.md</code> 配套，本稿定稿后按此实现，中途不再改</div>
+
+<h3>设计语言</h3>
+<div class="sw">
+  <div><i style="background:#1A1A1A"></i><span>主色 #1A1A1A<br>按钮 / 关键信息</span></div>
+  <div><i style="background:#F6F6F6"></i><span>页面底 #F6F6F6<br>卡片白底描边</span></div>
+  <div><i style="background:#E1F5EE"></i><span>成功绿 #E1F5EE<br>已提交状态</span></div>
+  <div><i style="background:#FAEEDA"></i><span>进行中 #FAEEDA<br>选片中状态</span></div>
+  <div><i style="background:#FCEBEB"></i><span>警示红 #FCEBEB<br>已过期 / 超额</span></div>
+</div>
+<div class="notes" style="list-style:none;padding-left:0;margin-top:14px">
+  <li>· 摄影师端：白底工作台风，信息密度高，状态一眼可见</li>
+  <li>· 模特端：黑底画册风，图片为主角，少量文字，选片像翻样册</li>
+  <li>· 网页上传：与小程序同风格，三步向导，大留白</li>
+  <li>· 字号：标题 16 / 正文 13 / 辅助 11；圆角卡片 10px、按钮 8px</li>
+  <li>· 全项目只有两个权重：常规 400、强调 600，不用粗体堆视觉</li>
+</div>
+
+<!-- ============ 摄影师端 ============ -->
+<h2>一、摄影师端<span class="tag">口令绑定后进入，默认首页 = 我的项目</span></h2>
+
+<div class="grid">
+
+  <div class="cell">
+    <div class="cell-head"><b>1. 我的项目（首页）</b><span>pages/home</span></div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>摄影选片</span><span>···</span></div>
+      <div class="navbar">我的项目<div class="r">+ 新建</div></div>
+      <div class="body">
+        <div class="card">
+          <div class="row"><span class="t">小王的夏日写真-2026.9</span><span class="chip g">已提交</span></div>
+          <div class="m">2 位模特 · 128 张 · 剩 22 天</div>
+          <div class="hr" style="margin:8px 0"></div>
+          <div class="m">小王 已选 12 / 12　·　小李 已选 8 / 12</div>
+        </div>
+        <div class="card">
+          <div class="row"><span class="t">城市夜景-3人创作</span><span class="chip a">选片中</span></div>
+          <div class="m">3 位模特 · 96 张 · 剩 9 天</div>
+          <div class="hr" style="margin:8px 0"></div>
+          <div class="m">小王 已选 5 / 不限　·　小李 未开始　·　小张 未开始</div>
+        </div>
+        <div class="card">
+          <div class="row"><span class="t">春日团建-4月</span><span class="chip r">已过期</span></div>
+          <div class="m">1 位模特 · 64 张 · 已过期</div>
+        </div>
+        <div style="flex:1"></div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>卡片：项目名 + 状态胶囊 + 模特数/照片数/剩余天数</li>
+      <li>下方列出每位模特的进度，不用进详情就能看全</li>
+      <li>过期项目置灰排在最后，可删除</li>
+      <li>空态：「还没有项目 · 点右上角新建」</li>
+      <li>右上角「+ 新建」常驻，模特端不会出现</li>
+    </ul>
+  </div>
+
+  <div class="cell">
+    <div class="cell-head"><b>2. 新建项目</b><span>pages/project-create</span></div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>摄影选片</span><span>···</span></div>
+      <div class="navbar"><div class="l">‹</div>新建项目</div>
+      <div class="body">
+        <div class="sect">基本信息</div>
+        <div class="field"><label>项目名称</label><span class="v">小王的夏日写真-2026.9</span></div>
+        <div class="field"><label>拍摄日期</label><span class="v">2026-09-21 ›</span></div>
+        <div class="sect">分享与选片</div>
+        <div class="field"><label>有效期</label><span class="v">30 天 ›</span></div>
+        <div class="field"><label>套餐张数</label><span class="v">12 张 ›</span></div>
+        <div class="m" style="font-size:11px;color:var(--ink3)">可选项：不限 / 10 / 12 / 20 / 30 / 自定义。模特选满后无法再勾选</div>
+        <div class="sect">备注（仅自己可见）</div>
+        <div class="field" style="align-items:flex-start"><span class="v" style="color:var(--ink3)">拍摄地点：滨江公园，ARW 在 D 盘</span></div>
+        <div style="flex:1"></div>
+        <div class="btn">创建项目</div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>只填项目名即可创建，其余有默认值（30 天 / 不限张数）</li>
+      <li>创建成功直接进项目工作台，第一步引导上传</li>
+      <li>模特不在这里选，创建后再邀请（见下屏）</li>
+    </ul>
+  </div>
+
+  <div class="cell">
+    <div class="cell-head"><b>3. 项目工作台</b><span>pages/project-detail（重构重点）</span></div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>摄影选片</span><span>···</span></div>
+      <div class="navbar"><div class="l">‹</div>项目详情<div class="r">···</div></div>
+      <div class="body">
+        <div class="t" style="font-size:14px;font-weight:600">小王的夏日写真-2026.9</div>
+        <div class="m" style="font-size:11px;color:var(--ink3)">2026-09-21 · 有效期至 10-21 · 套餐 12 张</div>
+
+        <div class="sect">① 照片</div>
+        <div class="card">
+          <div class="row">
+            <div><div class="t">已上传 128 张</div><div class="m">最后上传 10-01 13:17</div></div>
+            <div class="btn ghost mini">重新上传</div>
+          </div>
+          <div class="hr" style="margin:9px 0"></div>
+          <div class="btn" style="background:#fff;color:var(--ink);border:1px solid #D8D8D8">去电脑上传 / 继续上传</div>
+        </div>
+
+        <div class="sect">② 模特 2 / 5</div>
+        <div class="card">
+          <div class="row">
+            <div><div class="t">小王</div><div class="m">已提交 12 张 · 10-01 14:37</div></div>
+            <div style="display:flex;gap:6px"><span class="chip">链接</span><span class="chip">码</span></div>
+          </div>
+          <div class="hr" style="margin:9px 0"></div>
+          <div class="row">
+            <div><div class="t">小李</div><div class="m">选片中 8 / 12</div></div>
+            <div style="display:flex;gap:6px"><span class="chip">链接</span><span class="chip">码</span></div>
+          </div>
+          <div class="hr" style="margin:9px 0"></div>
+          <div class="btn ghost mini">+ 邀请模特</div>
+        </div>
+
+        <div class="sect">③ 结果</div>
+        <div class="card">
+          <div class="row"><div><div class="t">查看选片结果</div><div class="m">按模特分组 · 复制文件名</div></div><span class="chip">›</span></div>
+        </div>
+        <div style="flex:1"></div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li><b>三区块顺序按拍照流程排</b>：先上传 → 再邀请 → 看结果</li>
+      <li>未上传时区块① 显示为醒目引导卡「还没有照片 · 去电脑上传」</li>
+      <li>模特最多 5 位，满 5 时「+ 邀请模特」置灰并提示已达上限</li>
+      <li>每位模特右侧：复制链接 / 生成小程序码（认证后可用）</li>
+      <li>右上角「···」：删除项目、重置链接、延期</li>
+    </ul>
+  </div>
+
+  <div class="cell">
+    <div class="cell-head"><b>4. 上传引导弹层</b><span>点「去电脑上传」弹出</span></div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>摄影选片</span><span>···</span></div>
+      <div class="navbar"><div class="l">‹</div>项目详情</div>
+      <div class="body" style="padding:0">
+        <div class="modalwrap">
+          <div class="modal">
+            <div class="tt">在电脑上上传照片</div>
+            <div class="dd">照片较多，请用电脑浏览器打开下面的网址</div>
+            <div class="urlbox">https://cloud1-xxxx.tcloudbaseapp.com/upload</div>
+            <div class="dd">打开后输入这 6 位上传码（5 分钟内有效）</div>
+            <div class="codebox"><div class="num">442 372</div></div>
+            <div class="row" style="margin-bottom:10px">
+              <div class="btn ghost mini" style="flex:1">刷新上传码</div>
+              <div class="btn mini" style="flex:1;background:#fff;color:var(--ink);border:1px solid #D8D8D8">复制网址</div>
+            </div>
+            <div class="btn">复制「网址 + 上传码」</div>
+            <div class="dd" style="margin:10px 0 0">提示：只上传 JPG，ARW 会自动跳过，文件名保持相机原名</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>解决「小程序里看不出要去网页上传」的问题</li>
+      <li>网址写死展示 + 一键复制，发到微信「文件传输助手」即可在电脑打开</li>
+      <li>上传码过期可原地刷新，不用退出重进</li>
+    </ul>
+  </div>
+
+  <div class="cell">
+    <div class="cell-head"><b>5. 选片结果（按模特）</b><span>pages/selection-result</span></div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>摄影选片</span><span>···</span></div>
+      <div class="navbar"><div class="l">‹</div>选片结果</div>
+      <div class="body">
+        <div class="row" style="gap:6px">
+          <span class="chip i">小王 12 张</span><span class="chip">小李 8 张</span>
+        </div>
+        <div class="card" style="padding:10px">
+          <div class="grid3">
+            <div class="thumb"></div><div class="thumb"></div><div class="thumb"></div>
+            <div class="thumb"></div><div class="thumb"></div><div class="thumb"></div>
+            <div class="thumb"></div><div class="thumb"></div><div class="thumb"></div>
+          </div>
+        </div>
+        <div class="card" style="padding:10px">
+          <div class="m" style="margin-bottom:6px">文件名（按相机顺序）</div>
+          <div style="font-size:11px;color:var(--ink2);line-height:1.9">DSC00123.JPG<br>DSC00127.JPG<br>DSC00135.JPG<br>DSC00140.JPG</div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="row" style="gap:8px">
+          <div class="btn ghost" style="flex:1">切换视图</div>
+          <div class="btn" style="flex:1">复制全部文件名</div>
+        </div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>顶部模特切换（本例 2 位，最多 5 位）</li>
+      <li>网格 / 文件名列表两种视图，文件名与 DCIM 原名一致</li>
+      <li>一键复制全部文件名 → 回 Lightroom 按名找 ARW 精修</li>
+    </ul>
+  </div>
+
+  <div class="cell">
+    <div class="cell-head"><b>6. 身份引导页</b><span>pages/guide（新增）</span></div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>摄影选片</span><span>···</span></div>
+      <div class="navbar">摄影选片</div>
+      <div class="body" style="justify-content:center;align-items:center;text-align:center;gap:16px">
+        <div style="font-size:15px;font-weight:600">摄影师与模特的选片工具</div>
+        <div style="font-size:11px;color:var(--ink3);line-height:1.8">
+          摄影师在电脑上建项目、传照片<br>模特在微信里看图、选片、提交
+        </div>
+        <div style="width:100%;margin-top:10px">
+          <div class="btn">我是摄影师</div>
+          <div class="m" style="text-align:center;margin-top:6px">需输入摄影师口令，只需绑定一次</div>
+        </div>
+        <div style="width:100%">
+          <div class="btn ghost">我是模特</div>
+          <div class="m" style="text-align:center;margin-top:6px">请从摄影师发给你的链接或二维码进入</div>
+        </div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>只有「既不是管理员、也没有模特档案」的人才会看到</li>
+      <li>解决当前非管理员打开是空白页的困惑</li>
+    </ul>
+  </div>
+
+</div>
+
+<!-- ============ 模特端 ============ -->
+<h2>二、模特端<span class="tag">黑底画册风 · 首次由邀请链接进入，之后打开小程序直达</span></h2>
+
+<div class="grid">
+
+  <div class="cell">
+    <div class="cell-head"><b>7. 我的拍摄（模特首页）</b><span>pages/model-home（新增）</span></div>
+    <div class="phone dark">
+      <div class="status" style="background:#111;color:#888"><span>9:41</span><span>摄影选片</span><span>···</span></div>
+      <div class="navbar">我的拍摄</div>
+      <div class="body" style="background:#111">
+        <div class="card" style="background:#1C1C1C;border-color:#2A2A2A">
+          <div class="row"><span class="t" style="color:#fff">小王的夏日写真-2026.9</span><span class="chip a">选片中</span></div>
+          <div class="m">128 张 · 已选 8 / 12 · 剩 22 天</div>
+          <div class="grid3" style="margin-top:8px">
+            <div class="thumb" style="background:#2E2E2E"></div>
+            <div class="thumb" style="background:#2E2E2E"></div>
+            <div class="thumb" style="background:#2E2E2E"></div>
+          </div>
+        </div>
+        <div class="card" style="background:#1C1C1C;border-color:#2A2A2A">
+          <div class="row"><span class="t" style="color:#fff">城市夜景-3人创作</span><span class="chip">待选片</span></div>
+          <div class="m">96 张 · 还没开始 · 剩 9 天</div>
+        </div>
+        <div class="card" style="background:#1C1C1C;border-color:#2A2A2A">
+          <div class="row"><span class="t" style="color:#8A8A8A">春日团建-4月</span><span class="chip r">已过期</span></div>
+          <div class="m">已过期，无法再选片</div>
+        </div>
+        <div style="flex:1"></div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>列出<b>该模特名下全部项目</b>（拍 4 次就有 4 张卡片）</li>
+      <li>按时间倒序；过期项目置灰置底，不可进入</li>
+      <li>卡片带 3 张封面缩略图，方便一眼认出是哪次拍摄</li>
+      <li>身份靠微信 openid 自动识别，模特无需登录、无需输入</li>
+    </ul>
+  </div>
+
+  <div class="cell">
+    <div class="cell-head"><b>8. 选片页</b><span>pages/client-select</span></div>
+    <div class="phone dark">
+      <div class="status" style="background:#111;color:#888"><span>9:41</span><span>摄影选片</span><span>···</span></div>
+      <div class="navbar">小王的夏日写真-2026.9<div class="r" style="color:#ccc">全选本页</div></div>
+      <div class="body" style="background:#111;padding:4px;gap:0">
+        <div class="grid3">
+          <div class="thumb" style="background:#2E2E2E;position:relative"><div class="check on"><span></span></div></div>
+          <div class="thumb" style="background:#2E2E2E;position:relative"><div class="check"><span></span></div></div>
+          <div class="thumb" style="background:#2E2E2E;position:relative"><div class="check on"><span></span></div></div>
+          <div class="thumb" style="background:#2E2E2E;position:relative"><div class="check"><span></span></div></div>
+          <div class="thumb" style="background:#2E2E2E;position:relative"><div class="check"><span></span></div></div>
+          <div class="thumb" style="background:#2E2E2E;position:relative"><div class="check on"><span></span></div></div>
+          <div class="thumb" style="background:#2E2E2E;position:relative"><div class="check"><span></span></div></div>
+          <div class="thumb" style="background:#2E2E2E;position:relative"><div class="check"><span></span></div></div>
+          <div class="thumb" style="background:#2E2E2E;position:relative"><div class="check"><span></span></div></div>
+          <div class="thumb" style="background:#2E2E2E;position:relative"><div class="check"><span></span></div></div>
+          <div class="thumb" style="background:#2E2E2E;position:relative"><div class="check"><span></span></div></div>
+          <div class="thumb" style="background:#2E2E2E;position:relative"><div class="check"><span></span></div></div>
+        </div>
+        <div class="bottombar" style="background:#111;border-color:#2A2A2A">
+          <div class="txt" style="color:#fff">已选 8 / 12</div>
+          <div class="btn" style="background:#fff;color:#111">提交选片</div>
+        </div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>3 列网格，点图右下角圆圈勾选（选中为实心白点）</li>
+      <li>底部常驻栏：已选 N / 上限 M + 提交按钮</li>
+      <li>选满上限后未选中的图点不动，并轻提示「已达 12 张上限」</li>
+      <li>右上角「全选本页」；点图进大图浏览，左右滑动</li>
+      <li>选择自动保存，退出重进不丢</li>
+    </ul>
+  </div>
+
+  <div class="cell">
+    <div class="cell-head"><b>9. 大图浏览 + 提交确认</b><span>pages/photo-viewer / 提交弹窗</span></div>
+    <div class="phone dark">
+      <div class="status" style="background:#000;color:#888"><span>9:41</span><span>摄影选片</span><span>···</span></div>
+      <div class="navbar" style="background:#000;border:none;color:#fff">12 / 128</div>
+      <div class="body" style="background:#000;padding:0;justify-content:center;align-items:center">
+        <div style="width:100%;height:300px;background:#232323;display:flex;align-items:center;justify-content:center;color:#666;font-size:11px">大图（按需加载）</div>
+      </div>
+      <div style="padding:10px 12px;background:#000;border-top:1px solid #2A2A2A;display:flex;align-items:center;gap:10px">
+        <div style="flex:1;font-size:11px;color:#999">已选 8 / 12</div>
+        <div class="btn" style="background:#fff;color:#000">加入选片</div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>大图页可直接勾选 / 取消，返回列表同步</li>
+      <li>提交弹窗文案：「确认提交这 8 张？提交后不可自行修改，如需调整请联系摄影师」+ 取消 / 确认</li>
+      <li>提交成功后选片页变只读，状态改为「已提交」</li>
+    </ul>
+  </div>
+
+  <div class="cell">
+    <div class="cell-head"><b>10. 模特端状态说明</b><span>卡片与选片页的四种状态</span></div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>摄影选片</span><span>···</span></div>
+      <div class="navbar">状态规则</div>
+      <div class="body" style="gap:8px">
+        <div class="card">
+          <div class="row"><span class="t">待选片</span><span class="chip">灰</span></div>
+          <div class="m">项目已邀请，模特还没选过任何一张</div>
+        </div>
+        <div class="card">
+          <div class="row"><span class="t">选片中</span><span class="chip a">琥珀</span></div>
+          <div class="m">已选至少 1 张但未提交，可继续修改</div>
+        </div>
+        <div class="card">
+          <div class="row"><span class="t">已提交</span><span class="chip g">绿</span></div>
+          <div class="m">模特已提交，列表只读；摄影师可解锁重选</div>
+        </div>
+        <div class="card">
+          <div class="row"><span class="t">已过期</span><span class="chip r">红</span></div>
+          <div class="m">超过项目有效期，模特看到但无法进入选片</div>
+        </div>
+        <div class="card">
+          <div class="row"><span class="t">加载失败</span><span class="chip">重试</span></div>
+          <div class="m">弱网时显示「加载失败，点此重试」，不静默失败</div>
+        </div>
+        <div style="flex:1"></div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>四个状态在摄影师端与模特端用同一套颜色和文案</li>
+      <li>过期由服务端判断，前端不信任本地时间</li>
+    </ul>
+  </div>
+
+</div>
+
+<!-- ============ 网页上传 ============ -->
+<h2>三、网页上传端<span class="tag">电脑浏览器 · 三步向导，与小程序同风格</span></h2>
+
+<div class="grid" style="gap:22px">
+
+  <div class="cell" style="width:420px">
+    <div class="cell-head"><b>11. 步骤 1 · 输入上传码</b><span>web/index.html</span></div>
+    <div class="browser">
+      <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="url">cloud1-xxxx.tcloudbaseapp.com/upload</div></div>
+      <div class="bpage">
+        <div class="steps"><span class="s on">1</span>上传码<span style="margin:0 4px">›</span><span class="s">2</span>选照片<span style="margin:0 4px">›</span><span class="s">3</span>上传</div>
+        <div style="font-size:15px;font-weight:600;margin-top:6px">摄影选片 · 电脑上传</div>
+        <div style="font-size:11px;color:var(--ink3)">打开小程序项目详情 → 去电脑上传 → 复制 6 位上传码</div>
+        <div class="digits" style="margin-top:14px">
+          <div class="digit">4</div><div class="digit">4</div><div class="digit">2</div>
+          <div class="digit">3</div><div class="digit">7</div><div class="digit f"> </div>
+        </div>
+        <div class="m" style="font-size:11px;color:var(--ink3);text-align:center">上传码 5 分钟内有效，过期请在小程序刷新</div>
+        <div style="flex:1"></div>
+        <div class="btn">下一步</div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>不再出现 envId 输入框（改为内置），摄影师只输 6 位码</li>
+      <li>校验通过后显示所属项目名，确认没传错项目</li>
+    </ul>
+  </div>
+
+  <div class="cell" style="width:420px">
+    <div class="cell-head"><b>12. 步骤 2 · 选择照片</b><span>拖文件夹 / 点选</span></div>
+    <div class="browser">
+      <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="url">cloud1-xxxx.tcloudbaseapp.com/upload</div></div>
+      <div class="bpage">
+        <div class="steps"><span class="s on">1</span>上传码<span style="margin:0 4px">›</span><span class="s on">2</span>选照片<span style="margin:0 4px">›</span><span class="s">3</span>上传</div>
+        <div style="font-size:13px;font-weight:600">项目：小王的夏日写真-2026.9</div>
+        <div class="drop">把照片文件夹拖到这里<br><span style="font-size:11px">或点击选择文件夹 · 只读取 JPG，ARW 自动跳过</span></div>
+        <div class="card" style="padding:10px">
+          <div class="row"><span class="t">预览规格</span><span class="chip">标准 2048 ›</span></div>
+          <div class="m">高清 2880 / 标准 2048 / 自定义（长边 1200-4096、质量 40-95）</div>
+        </div>
+        <div class="card" style="padding:10px">
+          <div class="row"><span class="t">已选择</span><span class="t">128 张</span></div>
+          <div class="m">按文件名排序：DSC00001.JPG … DSC00128.JPG</div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="btn">开始上传（128 张）</div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>拖拽区 + 点击选择两种入口；文件夹递归读取</li>
+      <li>选中后按文件名自然排序展示，保证与相机顺序一致</li>
+      <li>规格默认「标准 2048」，老用户不用每次改</li>
+    </ul>
+  </div>
+
+  <div class="cell" style="width:420px">
+    <div class="cell-head"><b>13. 步骤 3 · 上传进度</b><span>进度 + 缩略图墙 + 失败重试</span></div>
+    <div class="browser">
+      <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="url">cloud1-xxxx.tcloudbaseapp.com/upload</div></div>
+      <div class="bpage">
+        <div class="steps"><span class="s on">1</span>上传码<span style="margin:0 4px">›</span><span class="s on">2</span>选照片<span style="margin:0 4px">›</span><span class="s on">3</span>上传</div>
+        <div class="row"><span style="font-size:13px;font-weight:600">正在上传</span><span style="font-size:12px;color:var(--ink2)">87 / 128</span></div>
+        <div class="prog"><i></i></div>
+        <div class="m" style="font-size:11px;color:var(--ink3)">已完成 87 张 · 失败 2 张 · 预计剩余 1 分钟</div>
+        <div class="grid3" style="grid-template-columns:repeat(6,1fr)">
+          <div class="thumb" style="aspect-ratio:1"></div><div class="thumb" style="aspect-ratio:1"></div>
+          <div class="thumb" style="aspect-ratio:1"></div><div class="thumb" style="aspect-ratio:1"></div>
+          <div class="thumb" style="aspect-ratio:1"></div><div class="thumb" style="aspect-ratio:1"></div>
+          <div class="thumb" style="aspect-ratio:1;background:#FCEBEB"></div><div class="thumb" style="aspect-ratio:1;background:#FCEBEB"></div>
+          <div class="thumb" style="aspect-ratio:1;background:#EDEDED"></div><div class="thumb" style="aspect-ratio:1;background:#EDEDED"></div>
+          <div class="thumb" style="aspect-ratio:1;background:#EDEDED"></div><div class="thumb" style="aspect-ratio:1;background:#EDEDED"></div>
+        </div>
+        <div class="card" style="padding:10px">
+          <div class="row"><span class="t" style="color:var(--red)">2 张失败</span><div class="btn ghost mini">重试失败项</div></div>
+          <div class="m">DSC00057.JPG、DSC00092.JPG（网络超时）</div>
+        </div>
+        <div style="flex:1"></div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>总进度条 + 数量 + 预估时间，不再黑屏干等</li>
+      <li>缩略图墙实时变亮（已完成）/ 红（失败）/ 灰（排队）</li>
+      <li>失败项一键重试，不重传全部</li>
+    </ul>
+  </div>
+
+  <div class="cell" style="width:420px">
+    <div class="cell-head"><b>14. 完成态</b><span>回小程序发邀请</span></div>
+    <div class="browser">
+      <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="url">cloud1-xxxx.tcloudbaseapp.com/upload</div></div>
+      <div class="bpage">
+        <div class="steps"><span class="s on">1</span>上传码<span style="margin:0 4px">›</span><span class="s on">2</span>选照片<span style="margin:0 4px">›</span><span class="s on">3</span>上传</div>
+        <div style="font-size:15px;font-weight:600">上传完成</div>
+        <div class="m" style="font-size:12px">共 128 张已登记到「小王的夏日写真-2026.9」</div>
+        <div class="card" style="padding:10px">
+          <div class="m">文件名保持相机原名，JPG 与 ARW 同名对应，可直接按文件名回 Lightroom 精修</div>
+        </div>
+        <div class="card" style="padding:10px">
+          <div class="row"><span class="t">下一步</span><span class="t">在小程序里邀请模特</span></div>
+          <div class="m">打开小程序 → 该项目 → 邀请模特 → 发送链接</div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="row" style="gap:8px"><div class="btn ghost" style="flex:1">继续上传</div><div class="btn" style="flex:1">完成</div></div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>明确告诉摄影师「上传完了，接下来去发链接」</li>
+      <li>避免当前「传完不知道下一步干嘛」的断档</li>
+    </ul>
+  </div>
+
+</div>
+
+<h2>四、页面与状态清单</h2>
+<table>
+  <tr><th>页面</th><td>摄影师端：guide（身份引导）· home（我的项目）· project-create · project-detail（工作台）· selection-result<br>模特端：model-home（我的拍摄）· client-select · photo-viewer<br>网页：上传三步向导</td></tr>
+  <tr><th>新增页面</th><td>guide、model-home 两个（其余为改版）</td></tr>
+  <tr><th>空态</th><td>项目列表：还没有项目，点右上角新建　|　模特列表：还没开始选片　|　我的拍摄：还没有拍摄项目，请从摄影师发的链接进入</td></tr>
+  <tr><th>加载态</th><td>骨架屏（网格占位灰块），超过 3 秒显示「网络较慢」</td></tr>
+  <tr><th>失败态</th><td>卡片内提示 + 「重新加载」按钮，不做静默 toast</td></tr>
+  <tr><th>上限提示</th><td>选片页选满：「已达 12 张上限，取消一张才能选新的」</td></tr>
+  <tr><th>过期</th><td>服务端判定；模特端卡片置灰不可点，摄影师端可延期</td></tr>
+</table>
+
+<div class="sub" style="margin-top:32px">本稿确认后即按此实现；如需调整请在本文件上标注，避免开发中途反复改。</div>
+
+</body>
+</html>

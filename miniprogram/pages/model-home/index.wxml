@@ -1,0 +1,43 @@
+<view class="page dark">
+  <view class="hello" wx:if="{{displayName}}">你好，{{displayName}}</view>
+
+  <view wx:if="{{loading && items.length === 0}}" class="empty">加载中…</view>
+
+  <view wx:elif="{{loadError}}" class="empty">
+    加载失败
+    <view class="retry" bindtap="load">点此重试</view>
+  </view>
+
+  <view wx:elif="{{items.length === 0}}" class="empty">
+    还没有拍摄项目
+    <view class="empty-sub">请从摄影师发给你的链接或二维码进入，之后这里会自动出现</view>
+  </view>
+
+  <block wx:else>
+    <view
+      class="card"
+      wx:for="{{items}}"
+      wx:key="key"
+      data-index="{{index}}"
+      bindtap="openProject"
+    >
+      <view class="row">
+        <view class="name">{{item.name}}</view>
+        <view class="chip {{item.statusClass}}">{{item.status}}</view>
+      </view>
+      <view class="meta">{{item.shoot}}</view>
+      <view class="meta">{{item.meta}} · {{item.selectText}}</view>
+
+      <view class="covers" wx:if="{{item.coverUrls.length > 0}}">
+        <image
+          class="cover"
+          wx:for="{{item.coverUrls}}"
+          wx:for-item="url"
+          wx:key="*this"
+          src="{{url}}"
+          mode="aspectFill"
+        />
+      </view>
+    </view>
+  </block>
+</view>

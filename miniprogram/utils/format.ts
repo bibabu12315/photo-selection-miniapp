@@ -27,3 +27,27 @@ export function formatTime(ts: number): string {
   const p = (n: number) => (n < 10 ? '0' + n : '' + n)
   return `${p(d.getHours())}:${p(d.getMinutes())}`
 }
+
+/** 有效期剩余天数：已过期返回 -1 */
+export function daysLeft(expireAt: number): number {
+  if (!expireAt) return -1
+  const diff = expireAt - Date.now()
+  if (diff <= 0) return -1
+  return Math.ceil(diff / 86400000)
+}
+
+/** 剩余天数文案，如「剩 22 天」/「已过期」 */
+export function expireText(expireAt: number): string {
+  const d = daysLeft(expireAt)
+  return d < 0 ? '已过期' : `剩 ${d} 天`
+}
+
+/** 拍摄日期文案，如「2026-09-21 拍摄」 */
+export function shootText(ts: number): string {
+  return ts ? formatDate(ts) + ' 拍摄' : '未填拍摄日期'
+}
+
+/** 套餐张数文案：0 = 不限 */
+export function packageText(packageCount: number): string {
+  return packageCount && packageCount > 0 ? `${packageCount} 张` : '不限'
+}

@@ -5,20 +5,27 @@ const db = cloud.database()
 const _ = db.command
 
 /**
- * 模特选片云函数
+ * 选片云函数（V2.0 双端版）
  *
- * 模特端（凭项目 accessToken 调用，openid 一码一人绑定）：
- *   action = entry            { token }                        进入项目：校验有效期 + 绑定 openid + 返回项目信息与已选列表
- *   action = getPhotos        { token, skip, limit }           分页拉取照片（含缩略图临时链接）
- *   action = getPreview       { token, photoId }               单张预览图临时链接（大图按需加载）
- *   action = saveSelection    { token, photoIds }              保存选择（未锁定时，整体覆盖）
- *   action = submitSelection  { token, photoIds }              提交并锁定
+ * 身份：
+ *   action = whoami           {}                                  我是谁：摄影师 / 模特 / 路人
  *
- * 摄影师端（需管理员身份）：
- *   action = getResult        { projectId }                    选片结果：选中照片 + 缩略图临时链接
- *   action = resetLock        { projectId }                    重新开放选片（解锁 + 清空绑定 + 计数归零）
+ * 模特端：
+ *   action = entry            { token }                            首次凭邀请链接进入，绑定微信身份
+ *   action = myList           {}                                   我的拍摄：我名下所有项目
+ *   action = getPhotos        { projectId, modelId, skip, limit }  分页拉取照片
+ *   action = getPreview       { projectId, modelId, photoId }      大图临时链接
+ *   action = saveSelection    { projectId, modelId, photoIds }     保存选择
+ *   action = submitSelection  { projectId, modelId, photoIds }     提交并锁定
  *
- * 前置：project / photo 集合已存在；selection 集合需手动创建（权限：仅管理端可读写）
+ * 摄影师端（管理员）：
+ *   action = getResult        { projectId, modelId }               某位模特的选片结果
+ *   action = resetLock        { projectId, modelId }               重新开放某位模特的选片
+ *
+ * 数据：
+ *   model     { openid, displayName }                     模特档案（openid 为空表示还没被认领）
+ *   invite    { projectId, modelId, token }               每位模特每个项目一条邀请，最多 5 条
+ *   selection { projectId, modelId, photoIds[], locked }  双人键，一项目×一模特一份
  */
 exports.main = async (event = {}) => {
   const { OPENID } = cloud.getWXContext()
@@ -28,8 +35,12 @@ exports.main = async (event = {}) => {
 
   try {
     switch (event.action) {
+      case 'whoami':
+        return await whoami(OPENID)
       case 'entry':
         return await entry(event, OPENID)
+      case 'myList':
+        return await myList(OPENID)
       case 'getPhotos':
         return await getPhotos(event, OPENID)
       case 'getPreview':
@@ -50,34 +61,152 @@ exports.main = async (event = {}) => {
   }
 }
 
-/* ---------- 模特端 ---------- */
+/* ---------- 身份 ---------- */
 
-/** 进入项目：校验 token + 有效期 + 一码一人绑定，返回项目概况和已选 photoIds */
-async function entry({ token }, openid) {
-  const { project } = await projectByToken(token)
-
-  const sel = await ensureSelection(project, openid)
-  if (!sel.ok) return { ok: false, error: sel.error }
-
-  const doc = sel.doc || { locked: false, photoIds: [] }
-  const locked = !!doc.locked
+async function whoami(openid) {
+  const isAdmin = await isAdmin(openid)
+  const m = await db.collection('model').where({ openid }).limit(1).get()
+  const model = m.data[0] || null
   return {
     ok: true,
     data: {
-      projectId: project._id,
-      name: project.name,
-      clientName: project.clientName || '',
-      photoCount: project.photoCount || 0,
-      locked,
-      selectedCount: locked ? (doc.photoIds || []).length : 0,
-      selectedIds: doc.photoIds || [],
+      openid,
+      isAdmin,
+      isModel: !!model,
+      displayName: model ? model.displayName : '',
     },
   }
 }
 
+/* ---------- 模特端 ---------- */
+
+/**
+ * 进入选片页：
+ * - 带 token：首次凭邀请链接进入，认领模特身份
+ * - 带 projectId + modelId：老模特从「我的拍摄」直接进
+ */
+async function entry({ token, projectId, modelId }, openid) {
+  if (!token) {
+    const { project, selection } = await guardModel(projectId, modelId, openid)
+    const mRes = await db.collection('model').doc(modelId).get()
+    return {
+      ok: true,
+      data: {
+        projectId: project._id,
+        modelId,
+        displayName: (mRes.data && mRes.data.displayName) || '',
+        projectName: project.name,
+        photoCount: project.photoCount || 0,
+        packageCount: project.packageCount || 0,
+        locked: !!(selection && selection.locked),
+        selectedIds: (selection && selection.photoIds) || [],
+      },
+    }
+  }
+
+  const inv = await inviteByToken(token)
+  const project = await projectById(inv.projectId)
+  assertNotExpired(project)
+
+  const mRes = await db.collection('model').doc(inv.modelId).get()
+  const model = mRes.data
+  if (!model) throw new Error('邀请已失效，请联系摄影师重新发送')
+
+  if (!model.openid) {
+    // 首次认领：这个微信号以后就是这个模特
+    await db.collection('model').doc(inv.modelId).update({
+      data: { openid, updatedAt: Date.now() },
+    })
+  } else if (model.openid !== openid) {
+    throw new Error('该链接已被其他微信账号使用，请联系摄影师重新发送')
+  }
+
+  const sel = await ensureSelection(project._id, inv.modelId)
+
+  return {
+    ok: true,
+    data: {
+      projectId: project._id,
+      modelId: inv.modelId,
+      displayName: model.displayName,
+      projectName: project.name,
+      photoCount: project.photoCount || 0,
+      packageCount: project.packageCount || 0,
+      locked: !!sel.locked,
+      selectedIds: sel.photoIds || [],
+    },
+  }
+}
+
+/** 我的拍摄：该模特名下全部项目（拍几次就有几个） */
+async function myList(openid) {
+  const mRes = await db.collection('model').where({ openid }).limit(1).get()
+  const model = mRes.data[0]
+  if (!model) return { ok: true, data: { items: [], displayName: '' } }
+
+  const invRes = await db.collection('invite').where({ modelId: model._id }).limit(100).get()
+  const invites = invRes.data || []
+  if (!invites.length) return { ok: true, data: { items: [], displayName: model.displayName } }
+
+  const projectIds = Array.from(new Set(invites.map((i) => i.projectId)))
+  const pRes = await db
+    .collection('project')
+    .where({ _id: _.in(projectIds) })
+    .limit(100)
+    .get()
+  const projects = {}
+  for (const p of pRes.data || []) projects[p._id] = p
+
+  const sRes = await db
+    .collection('selection')
+    .where({ projectId: _.in(projectIds), modelId: model._id })
+    .limit(100)
+    .get()
+  const sels = {}
+  for (const s of sRes.data || []) sels[s.projectId] = s
+
+  const now = Date.now()
+  const items = invites
+    .map((inv) => {
+      const p = projects[inv.projectId]
+      if (!p) return null
+      const sel = sels[inv.projectId] || { photoIds: [], locked: false }
+      const expired = !!p.expireAt && p.expireAt < now
+      return {
+        projectId: p._id,
+        modelId: model._id,
+        name: p.name,
+        shootDate: p.shootDate || p.createdAt || 0,
+        photoCount: p.photoCount || 0,
+        packageCount: p.packageCount || 0,
+        expireAt: p.expireAt || 0,
+        selectedCount: (sel.photoIds || []).length,
+        locked: !!sel.locked,
+        expired,
+        coverThumbs: p.coverThumbs || [],
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.shootDate - a.shootDate)
+
+  // 封面缩略图换临时链接
+  const coverKeys = []
+  items.forEach((it, idx) => {
+    it.key = 'k' + idx
+    ;(it.coverThumbs || []).forEach((f) => coverKeys.push(f))
+  })
+  const urlMap = await tempUrls(coverKeys)
+  items.forEach((it) => {
+    it.coverUrls = (it.coverThumbs || []).map((f) => urlMap[f] || '')
+    delete it.coverThumbs
+  })
+
+  return { ok: true, data: { items, displayName: model.displayName } }
+}
+
 /** 分页拉取照片 + 缩略图临时链接 */
-async function getPhotos({ token, skip = 0, limit = 18 }, openid) {
-  const { project, selection } = await guardClient(token, openid)
+async function getPhotos({ projectId, modelId, skip = 0, limit = 18 }, openid) {
+  const { project, selection } = await guardModel(projectId, modelId, openid)
 
   const s = Math.max(0, parseInt(skip, 10) || 0)
   const l = Math.min(50, Math.max(1, parseInt(limit, 10) || 18))
@@ -105,13 +234,14 @@ async function getPhotos({ token, skip = 0, limit = 18 }, openid) {
       })),
       hasMore: photos.length === l,
       locked: !!(selection && selection.locked),
+      packageCount: project.packageCount || 0,
     },
   }
 }
 
-/** 单张预览图临时链接（模特大图按需加载） */
-async function getPreview({ token, photoId }, openid) {
-  const { project } = await guardClient(token, openid)
+/** 单张大图临时链接 */
+async function getPreview({ projectId, modelId, photoId }, openid) {
+  const { project } = await guardModel(projectId, modelId, openid)
 
   const res = await db.collection('photo').doc(String(photoId || '')).get()
   const photo = res.data
@@ -126,88 +256,70 @@ async function getPreview({ token, photoId }, openid) {
       photoId: photo._id,
       filename: photo.filename,
       previewUrl: urlMap[photo.previewFileID] || '',
-      selected: false, // 由页面根据本地状态覆盖
     },
   }
 }
 
-/** 保存 / 提交选片 */
-async function saveSelection({ token, photoIds }, openid, submit) {
-  const { project, selection } = await guardClient(token, openid)
+/** 保存 / 提交选片（提交后仍可回来调整，重新提交覆盖上一版） */
+async function saveSelection({ projectId, modelId, photoIds }, openid, submit) {
+  const { project } = await guardModel(projectId, modelId, openid)
 
-  if (selection && selection.locked) {
-    return { ok: false, error: '选片已提交锁定，如需修改请联系摄影师重新开放' }
+  const ids = Array.isArray(photoIds)
+    ? Array.from(
+        new Set(
+          photoIds.filter((x) => typeof x === 'string' && /^[A-Za-z0-9_-]{5,64}$/.test(x))
+        )
+      )
+    : []
+
+  const limit = project.packageCount || 0
+  if (limit > 0 && ids.length > limit) {
+    return { ok: false, error: `最多只能选 ${limit} 张，当前选了 ${ids.length} 张` }
   }
 
-  // photoIds 校验：数组、元素为合法 id、数量不超过项目照片总数
-  const ids = Array.isArray(photoIds)
-    ? photoIds.filter((x) => typeof x === 'string' && /^[A-Za-z0-9_-]{5,64}$/.test(x))
-    : []
-  const unique = Array.from(new Set(ids))
   const cnt = await db.collection('photo').where({ projectId: project._id }).count()
-  if (unique.length > cnt.total) {
+  if (ids.length > cnt.total) {
     return { ok: false, error: '选择数量超出项目照片总数，请重试' }
   }
 
   const now = Date.now()
+  const selId = await ensureSelectionId(project._id, modelId)
 
-  // 管理员自测时可能还没有 selection 文档，先补建
-  let selId = selection && selection._id
-  if (!selId) {
-    const add = await db.collection('selection').add({
-      data: {
-        projectId: project._id,
-        photoIds: [],
-        locked: false,
-        submittedAt: 0,
-        boundOpenid: '',
-        createdAt: now,
-        updatedAt: now,
-      },
-    })
-    selId = add._id
-  }
-
-  const update = { photoIds: unique, updatedAt: now }
+  const update = { photoIds: ids, updatedAt: now }
   if (submit) {
     update.locked = true
     update.submittedAt = now
   }
   await db.collection('selection').doc(selId).update({ data: update })
 
-  if (submit) {
-    await db.collection('project').doc(project._id).update({
-      data: { selectedCount: unique.length, status: 'SELECTION_SUBMITTED', updatedAt: now },
-    })
-  }
+  // 项目卡片上的进度摘要
+  await updateModelSummary(project._id, modelId, {
+    selectedCount: ids.length,
+    status: submit ? '已提交' : ids.length > 0 ? '选片中' : '待选片',
+    submittedAt: submit ? now : 0,
+  })
 
   return {
     ok: true,
-    data: {
-      saved: true,
-      locked: !!submit,
-      selectedCount: unique.length,
-    },
+    data: { saved: true, locked: !!submit, selectedCount: ids.length },
   }
 }
 
 /* ---------- 摄影师端 ---------- */
 
-/** 选片结果：选中照片（缩略图 + 文件名，按 sortOrder 升序与 Lightroom 对齐） */
-async function getResult({ projectId }, openid) {
+/** 某位模特的选片结果 */
+async function getResult({ projectId, modelId }, openid) {
   if (!(await isAdmin(openid))) {
     return { ok: false, error: '无权限：仅摄影师可查看选片结果' }
   }
-  if (!projectId) return { ok: false, error: '缺少项目 _id' }
+  if (!projectId || !modelId) return { ok: false, error: '缺少参数' }
 
-  let sel = null
-  try {
-    const res = await db.collection('selection').where({ projectId }).limit(1).get()
-    sel = res.data[0] || null
-  } catch (e) {
-    sel = null
-  }
-
+  const selRes = await db
+    .collection('selection')
+    .where({ projectId, modelId })
+    .limit(1)
+    .get()
+  const sel = selRes.data[0] || null
   const selectedSet = new Set((sel && sel.photoIds) || [])
 
   const res = await db
@@ -218,7 +330,6 @@ async function getResult({ projectId }, openid) {
     .get()
   const photos = res.data || []
 
-  // 只为选中的照片取临时链接，节省调用
   const selectedPhotos = photos.filter((p) => selectedSet.has(p._id))
   const urlMap = await tempUrls(selectedPhotos.map((p) => p.thumbFileID))
 
@@ -237,23 +348,34 @@ async function getResult({ projectId }, openid) {
   }
 }
 
-/** 重新开放选片：解锁 + 清空提交状态 + 解绑微信账号（模特换人时用） */
-async function resetLock({ projectId }, openid) {
+/** 重新开放某位模特的选片：解锁但保留她已选的照片，在其基础上继续挑 */
+async function resetLock({ projectId, modelId }, openid) {
   if (!(await isAdmin(openid))) {
     return { ok: false, error: '无权限：仅摄影师可重新开放选片' }
   }
-  if (!projectId) return { ok: false, error: '缺少项目 _id' }
+  if (!projectId || !modelId) return { ok: false, error: '缺少参数' }
 
   const now = Date.now()
-  const selRes = await db.collection('selection').where({ projectId }).limit(1).get()
+  const selRes = await db
+    .collection('selection')
+    .where({ projectId, modelId })
+    .limit(1)
+    .get()
   const sel = selRes.data[0]
+  const keep = (sel && sel.photoIds) || []
   if (sel) {
     await db.collection('selection').doc(sel._id).update({
-      data: { locked: false, submittedAt: 0, photoIds: [], boundOpenid: '', updatedAt: now },
+      data: { locked: false, submittedAt: 0, photoIds: keep, updatedAt: now },
     })
   }
+
+  await updateModelSummary(projectId, modelId, {
+    selectedCount: keep.length,
+    status: keep.length > 0 ? '选片中' : '待选片',
+    submittedAt: 0,
+  })
   await db.collection('project').doc(projectId).update({
-    data: { selectedCount: 0, status: 'SELECTING', updatedAt: now },
+    data: { status: 'SELECTING', updatedAt: now },
   })
 
   return { ok: true, data: { reset: true } }
@@ -261,86 +383,121 @@ async function resetLock({ projectId }, openid) {
 
 /* ---------- guards & helpers ---------- */
 
-/** token → 项目，并校验有效期 */
-async function projectByToken(token) {
+async function inviteByToken(token) {
   const t = String(token || '').trim()
-  if (t.length < 16) {
-    throw new Error('访问链接无效，请通过摄影师分享的入口进入')
-  }
-  const res = await db.collection('project').where({ accessToken: t }).limit(1).get()
-  const project = res.data[0]
-  if (!project) {
-    throw new Error('项目不存在或链接已失效，请联系摄影师重新分享')
-  }
-  if (project.expireAt && project.expireAt < Date.now()) {
+  if (t.length < 16) throw new Error('邀请链接无效，请通过摄影师分享的入口进入')
+  const res = await db.collection('invite').where({ token: t }).limit(1).get()
+  const inv = res.data[0]
+  if (!inv) throw new Error('邀请链接已失效，请联系摄影师重新发送')
+  return inv
+}
+
+async function projectById(id) {
+  const res = await db.collection('project').doc(String(id || '')).get()
+  const p = res.data
+  if (!p) throw new Error('项目不存在')
+  return p
+}
+
+function assertNotExpired(p) {
+  if (p.expireAt && p.expireAt < Date.now()) {
     throw new Error('项目已过期，请联系摄影师')
   }
-  return { project }
 }
 
 /**
- * 模特端统一守卫：token 有效 + openid 绑定校验。
- * 管理员（摄影师本人）直接放行且不写入绑定，方便自测。
+ * 模特端统一守卫：项目有效 + 该模特确实被邀请 + openid 与模特档案一致。
+ * 摄影师（管理员）放行，方便自测。
  */
-async function guardClient(token, openid) {
-  const { project } = await projectByToken(token)
+async function guardModel(projectId, modelId, openid) {
+  if (!projectId || !modelId) throw new Error('缺少参数')
 
-  const selRes = await db.collection('selection').where({ projectId: project._id }).limit(1).get()
-  const selection = selRes.data[0] || null
+  const project = await projectById(projectId)
+  assertNotExpired(project)
+
+  const invRes = await db
+    .collection('invite')
+    .where({ projectId, modelId })
+    .limit(1)
+    .get()
+  if (!invRes.data.length) throw new Error('你没有被邀请进这个项目')
 
   if (await isAdmin(openid)) {
-    return { project, selection: selection || { _id: '', photoIds: [], locked: false } }
+    const selRes = await db
+      .collection('selection')
+      .where({ projectId, modelId })
+      .limit(1)
+      .get()
+    return { project, selection: selRes.data[0] || null }
   }
 
-  if (!selection) {
-    throw new Error('请先重新进入项目（入口链接无效）')
-  }
-  if (selection.boundOpenid && selection.boundOpenid !== openid) {
-    throw new Error('此链接已被其他微信账号使用，请联系摄影师重新分享')
-  }
-  return { project, selection }
-}
-
-/** 进入时补建/补绑 selection 文档；管理员不绑定 */
-async function ensureSelection(project, openid) {
-  const now = Date.now()
-  const selRes = await db.collection('selection').where({ projectId: project._id }).limit(1).get()
-  let doc = selRes.data[0] || null
-
-  if (!(await isAdmin(openid))) {
-    if (!doc) {
-      const add = await db.collection('selection').add({
-        data: {
-          projectId: project._id,
-          photoIds: [],
-          locked: false,
-          submittedAt: 0,
-          boundOpenid: openid,
-          createdAt: now,
-          updatedAt: now,
-        },
-      })
-      doc = { _id: add._id, photoIds: [], locked: false }
-    } else if (!doc.boundOpenid) {
-      await db.collection('selection').doc(doc._id).update({
-        data: { boundOpenid: openid, updatedAt: now },
-      })
-    } else if (doc.boundOpenid !== openid) {
-      return { ok: false, error: '此链接已被其他微信账号使用，请联系摄影师重新分享' }
-    }
+  const mRes = await db.collection('model').doc(modelId).get()
+  const model = mRes.data
+  if (!model || model.openid !== openid) {
+    throw new Error('请用你自己的微信打开，或联系摄影师重新发送链接')
   }
 
-  // 首次进入时把状态推到 SELECTING（保持 SELECTING 以后的状态不变）
+  const selRes = await db
+    .collection('selection')
+    .where({ projectId, modelId })
+    .limit(1)
+    .get()
+  const selection = selRes.data[0] || null
+
   if (project.status === 'DRAFT' || project.status === 'UPLOADING') {
-    await db.collection('project').doc(project._id).update({
-      data: { status: 'SELECTING', updatedAt: now },
+    await db.collection('project').doc(projectId).update({
+      data: { status: 'SELECTING', updatedAt: Date.now() },
     })
   }
 
-  return { ok: true, doc }
+  return { project, selection }
 }
 
-/** 批量取临时链接（getTempFileURL 单次最多 50 个，分块调用） */
+async function ensureSelection(projectId, modelId) {
+  const selRes = await db
+    .collection('selection')
+    .where({ projectId, modelId })
+    .limit(1)
+    .get()
+  if (selRes.data[0]) return selRes.data[0]
+
+  const now = Date.now()
+  const add = await db.collection('selection').add({
+    data: {
+      projectId,
+      modelId,
+      photoIds: [],
+      locked: false,
+      submittedAt: 0,
+      createdAt: now,
+      updatedAt: now,
+    },
+  })
+  return { _id: add._id, photoIds: [], locked: false }
+}
+
+async function ensureSelectionId(projectId, modelId) {
+  const sel = await ensureSelection(projectId, modelId)
+  return sel._id
+}
+
+/** 更新 project.models 里某位模特的摘要，并顺带推进项目状态 */
+async function updateModelSummary(projectId, modelId, patch) {
+  const p = await projectById(projectId)
+  const models = (p.models || []).map((m) =>
+    m.modelId === modelId ? Object.assign({}, m, patch) : m
+  )
+  const update = { models, updatedAt: Date.now() }
+
+  const all = models.length > 0 && models.every((m) => m.status === '已提交')
+  if (all) update.status = 'SELECTION_SUBMITTED'
+  else if (p.status !== 'SELECTION_SUBMITTED') update.status = 'SELECTING'
+
+  await db.collection('project').doc(projectId).update({ data: update })
+  return models
+}
+
+/** 批量取临时链接（getTempFileURL 单次最多 50 个） */
 async function tempUrls(fileIDs) {
   const out = {}
   const list = Array.from(new Set((fileIDs || []).filter(Boolean)))

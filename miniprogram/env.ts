@@ -15,3 +15,11 @@ export const PREVIEW_PRESET = {
   standard: { longEdge: 2048, quality: 82 },
   high: { longEdge: 2880, quality: 90 },
 }
+
+/**
+ * 电脑端上传页地址（CloudBase 静态托管默认域名 + /index.html）。
+ * 开通静态托管后，把这里换成控制台给出的默认域名即可，
+ * 例如 https://cloud1-xxxx-1304825656.tcloudbaseapp.com/index.html
+ */
+export const UPLOAD_PAGE_URL = 'https://cloud1-d2guu7uw1a306815a-1499127316.tcloudbaseapp.com/index.html'
+

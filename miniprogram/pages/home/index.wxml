@@ -1,50 +1,28 @@
-<view class="container">
-  <block wx:if="{{isAdmin}}">
-    <view class="header">
-      <text class="title">我的拍摄</text>
-      <view class="add-btn" bindtap="goCreate">＋ 新建项目</view>
-    </view>
+<view class="page">
+  <view wx:if="{{loading && projects.length === 0}}" class="empty">加载中…</view>
 
-    <view wx:if="{{loading}}" class="hint">加载中…</view>
-
-    <view wx:elif="{{projects.length === 0}}" class="hint">
+  <block wx:else>
+    <view wx:if="{{projects.length === 0}}" class="empty">
       还没有项目
-      点右上角「新建项目」开始第一次选片
+      <view class="empty-sub">点右上角「+ 新建」，创建后在电脑上上传照片</view>
     </view>
 
-    <block wx:else>
-      <view
-        class="project-card"
-        wx:for="{{projects}}"
-        wx:key="_id"
-        bindtap="openProject"
-        data-id="{{item._id}}"
-      >
-        <view class="p-name">{{item.name}}</view>
-        <view class="p-meta">{{item.meta}}</view>
+    <view
+      class="card"
+      wx:for="{{projects}}"
+      wx:key="_id"
+      data-id="{{item._id}}"
+      bindtap="openProject"
+    >
+      <view class="row">
+        <view class="name">{{item.name}}</view>
+        <view class="chip {{item.statusClass}}">{{item.status}}</view>
       </view>
-    </block>
-  </block>
-
-  <block wx:elif="{{loginReady}}">
-    <view class="bind-panel">
-      <view class="bind-title">摄影师验证</view>
-      <view class="bind-hint">首次使用需输入管理口令（云函数环境变量 ADMIN_BIND_KEY）</view>
-      <input
-        class="bind-input"
-        password
-        value="{{key}}"
-        bindinput="onKeyInput"
-        placeholder="输入管理口令"
-      />
-      <view class="btn" bindtap="bindAdminAction">
-        {{binding ? '验证中…' : '绑定管理员'}}
-      </view>
-      <view wx:if="{{bindError}}" class="bind-error">{{bindError}}</view>
-      <view class="bind-openid">你的 openid：{{openid}}</view>
+      <view class="meta">{{item.meta}}</view>
+      <view class="hr"></view>
+      <view class="models">{{item.modelsLine}}</view>
     </view>
   </block>
-
-  <view wx:else class="hint">正在获取身份…</view>
 </view>
- 
+
+<view class="fab" bindtap="goCreate">+ 新建</view>

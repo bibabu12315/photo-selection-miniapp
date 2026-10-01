@@ -158,8 +158,10 @@ async function registerPhoto(ev) {
     },
   })
 
+  // 项目封面：取前 3 张缩略图，供模特端「我的拍摄」列表显示
   const updateData = { photoCount: _.inc(1), updatedAt: now }
   if (p.status === 'DRAFT') updateData.status = 'UPLOADING'
+  if ((p.coverThumbs || []).length < 3) updateData.coverThumbs = _.push([thumbFileID])
   await db.collection('project').doc(projectId).update({ data: updateData })
 
   return { ok: true, data: { photoId: add._id } }

@@ -1,10 +1,18 @@
 page {
   --bg: #ffffff;
-  --fg: #111111;
+  --page: #f6f6f6;
+  --fg: #1a1a1a;
+  --fg2: #4a4a4a;
   --muted: #8a8a8a;
-  --line: #ebebeb;
-  --ok: #1d9e75;
-  --err: #d85a30;
+  --line: #e8e8e8;
+  --line2: #d8d8d8;
+  --chip: #f2f2f2;
+  --green: #1d9e75;
+  --green-bg: #e1f5ee;
+  --amber: #ba7517;
+  --amber-bg: #faeeda;
+  --red: #e24b4a;
+  --red-bg: #fcebeb;
 
   background: var(--bg);
   color: var(--fg);
@@ -12,47 +20,154 @@ page {
   line-height: 1.6;
 }
 
-.container {
-  padding: 32rpx;
+/* ---------- 通用容器 ---------- */
+
+.page {
+  min-height: 100vh;
+  background: var(--page);
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.card {
+  background: #ffffff;
+  border: 1rpx solid var(--line);
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
 }
 
 .row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24rpx 0;
-  border-bottom: 1rpx solid var(--line);
+  gap: 16rpx;
 }
 
-.label {
+.sect-title {
+  font-size: 22rpx;
   color: var(--muted);
+  letter-spacing: 1rpx;
+  margin: 8rpx 0 4rpx 8rpx;
 }
 
-.value {
-  font-family: monospace;
-  word-break: break-all;
+.hint {
+  font-size: 24rpx;
+  color: var(--muted);
+  line-height: 1.7;
 }
+
+.hr {
+  height: 1rpx;
+  background: var(--line);
+  margin: 18rpx 0;
+}
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 26rpx;
+  padding: 120rpx 40rpx;
+  line-height: 1.9;
+}
+
+/* ---------- 按钮 ---------- */
 
 .btn {
-  margin-top: 32rpx;
-  background: #111111;
+  background: #1a1a1a;
   color: #ffffff;
-  border-radius: 8rpx;
-  padding: 24rpx;
+  border-radius: 16rpx;
+  padding: 22rpx 24rpx;
   text-align: center;
+  font-size: 28rpx;
 }
 
 .btn:active {
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
-.panel {
-  margin-top: 32rpx;
-  padding: 24rpx;
-  background: #f7f7f7;
-  border-radius: 8rpx;
-  font-family: monospace;
+.btn.ghost {
+  background: #ffffff;
+  color: var(--fg);
+  border: 1rpx solid var(--line2);
+}
+
+.btn.small {
+  padding: 12rpx 20rpx;
   font-size: 24rpx;
-  white-space: pre-wrap;
-  word-break: break-all;
+  border-radius: 12rpx;
+}
+
+.btn.disabled {
+  background: #e6e6e6;
+  color: #a8a8a8;
+}
+
+/* ---------- 状态胶囊 ---------- */
+
+.chip {
+  display: inline-block;
+  font-size: 22rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  background: var(--chip);
+  color: var(--fg2);
+}
+
+.chip.green {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.chip.amber {
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+
+.chip.red {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.chip.solid {
+  background: #1a1a1a;
+  color: #ffffff;
+}
+
+/* ---------- 表单 ---------- */
+
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1rpx solid var(--line);
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 16rpx;
+}
+
+.field .label {
+  font-size: 26rpx;
+  color: var(--muted);
+}
+
+.field .value {
+  font-size: 26rpx;
+  color: var(--fg);
+}
+
+.field .value.placeholder {
+  color: #b8b8b8;
+}
+
+.title {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.meta {
+  font-size: 24rpx;
+  color: var(--muted);
+  margin-top: 6rpx;
 }

@@ -1,0 +1,54 @@
+.wrap {
+  min-height: 100vh;
+  background: #ffffff;
+  padding: 120rpx 56rpx 80rpx;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.logo {
+  font-size: 44rpx;
+  font-weight: 600;
+  letter-spacing: 4rpx;
+}
+
+.slogan {
+  font-size: 28rpx;
+  color: var(--fg2);
+  margin-top: 16rpx;
+}
+
+.desc {
+  font-size: 24rpx;
+  color: var(--muted);
+  margin-top: 24rpx;
+  line-height: 1.9;
+}
+
+.block {
+  margin-top: 80rpx;
+  text-align: center;
+}
+
+.input {
+  background: #f6f6f6;
+  border: 1rpx solid var(--line);
+  border-radius: 16rpx;
+  padding: 24rpx;
+  font-size: 28rpx;
+  text-align: center;
+  margin-bottom: 20rpx;
+}
+
+.tip {
+  font-size: 22rpx;
+  color: var(--muted);
+  margin-top: 16rpx;
+  line-height: 1.8;
+}
+
+.err {
+  font-size: 24rpx;
+  color: var(--red);
+  margin-top: 12rpx;
+}

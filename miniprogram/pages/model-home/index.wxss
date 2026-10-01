@@ -1,0 +1,75 @@
+.page.dark {
+  min-height: 100vh;
+  background: #111111;
+  color: #ffffff;
+  padding-bottom: 80rpx;
+}
+
+.hello {
+  font-size: 26rpx;
+  color: #8a8a8a;
+  padding: 8rpx 8rpx 20rpx;
+}
+
+.card {
+  background: #1c1c1c;
+  border: 1rpx solid #2a2a2a;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+}
+
+.card:active {
+  background: #232323;
+}
+
+.name {
+  font-size: 30rpx;
+  font-weight: 600;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  font-size: 24rpx;
+  color: #8a8a8a;
+  margin-top: 6rpx;
+}
+
+.covers {
+  display: flex;
+  gap: 8rpx;
+  margin-top: 18rpx;
+}
+
+.cover {
+  width: 33%;
+  height: 140rpx;
+  border-radius: 10rpx;
+  background: #2e2e2e;
+}
+
+.empty {
+  text-align: center;
+  color: #8a8a8a;
+  font-size: 26rpx;
+  padding: 160rpx 40rpx;
+  line-height: 1.9;
+}
+
+.empty-sub {
+  font-size: 24rpx;
+  color: #666666;
+  margin-top: 12rpx;
+}
+
+.retry {
+  display: inline-block;
+  margin-top: 24rpx;
+  padding: 12rpx 32rpx;
+  border: 1rpx solid #3a3a3a;
+  border-radius: 999rpx;
+  color: #ffffff;
+}

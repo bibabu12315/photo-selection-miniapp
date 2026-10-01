@@ -74,6 +74,28 @@
   margin-top: 32rpx;
 }
 
+.reopen-btn {
+  display: inline-block;
+  margin-top: 40rpx;
+  padding: 18rpx 64rpx;
+  background: #ffffff;
+  color: #111;
+  font-size: 28rpx;
+  font-weight: 500;
+  border-radius: 12rpx;
+}
+
+/* 提交过一版的顶部提示条 */
+.resubmit-tip {
+  margin-bottom: 16rpx;
+  padding: 14rpx 20rpx;
+  background: #faeeda;
+  color: #8a5a1e;
+  font-size: 24rpx;
+  line-height: 1.6;
+  border-radius: 8rpx;
+}
+
 .head {
   margin-bottom: 24rpx;
 }
@@ -131,10 +153,25 @@
   box-sizing: border-box;
 }
 
+/* 选中：绿色实心圆 + 白色对勾，状态一眼可辨 */
 .badge.on {
   background: #1f8a4c;
   border-color: #1f8a4c;
-  color: #fff;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.head-left {
+  flex: 1;
+}
+
+.select-all {
+  flex: none;
+  font-size: 24rpx;
+  color: #cccccc;
+  border: 1rpx solid #3a3a3a;
+  border-radius: 999rpx;
+  padding: 10rpx 24rpx;
 }
 
 .more {
@@ -167,11 +204,12 @@
 }
 
 .bar-btn {
-  background: #1f8a4c;
-  color: #fff;
+  background: #ffffff;
+  color: #111111;
   font-size: 30rpx;
   padding: 20rpx 60rpx;
   border-radius: 12rpx;
+  font-weight: 500;
 }
 
 .bar-btn.disabled {

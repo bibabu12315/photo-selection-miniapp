@@ -2,7 +2,6 @@
   <view wx:if="{{phase === 'loading'}}" class="center">加载中…</view>
 
   <view wx:elif="{{phase === 'error'}}" class="center">
-    <view class="err-icon">⚠</view>
     <view class="err-text">{{errorMsg}}</view>
     <view class="retry-btn" bindtap="retryInit">重新加载</view>
   </view>
@@ -10,17 +9,26 @@
   <block wx:elif="{{phase === 'locked'}}">
     <view class="center locked">
       <view class="done-icon">✓</view>
-      <view class="done-title">选片已提交</view>
+      <view class="done-title">已提交给摄影师</view>
       <view class="done-meta">{{projectName}}</view>
-      <view class="done-meta">已选 {{selectedCount}} 张照片</view>
-      <view class="done-hint">摄影师将按您的选择进行精修，完成后会通过微信发送给您。</view>
+      <view class="done-meta">当前已选 {{selectedCount}} 张照片</view>
+      <view class="done-hint">想换几张？随时可以回到选片页继续调整，重新提交即覆盖。</view>
+      <view class="reopen-btn" bindtap="reopen">继续调整</view>
     </view>
   </block>
 
   <block wx:else>
     <view class="head">
-      <view class="name">{{projectName}}</view>
-      <view class="meta">{{photoCount}} 张 · 已选 <text class="num">{{selectedCount}}</text> 张</view>
+      <view wx:if="{{resubmitHint}}" class="resubmit-tip">
+        已提交过一版（{{selectedCount}} 张），可在此基础上继续调整，改完记得重新提交
+      </view>
+      <view class="row">
+        <view class="head-left">
+          <view class="name">{{projectName}}</view>
+          <view class="meta">{{photoCount}} 张 · 上限 {{limitText}}</view>
+        </view>
+        <view class="select-all" bindtap="selectAllPage">全选本页</view>
+      </view>
     </view>
 
     <view class="grid">
@@ -43,7 +51,9 @@
 
     <view class="bar-space"></view>
     <view class="bar">
-      <view class="bar-info">已选 {{selectedCount}} 张</view>
+      <view class="bar-info">
+        已选 <text class="num">{{selectedCount}}</text> / {{limitText}}
+      </view>
       <view class="bar-btn {{submitting ? 'disabled' : ''}}" bindtap="submit">提交选片</view>
     </view>
   </block>

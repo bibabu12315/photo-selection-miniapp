@@ -1,21 +1,68 @@
-import { getProject, issueUploadCode, getQrCode } from '../../services/project'
-import { statusText, formatDate, formatTime } from '../../utils/format'
+import {
+  getProject,
+  issueUploadCode,
+  extendProject,
+  removeProject,
+  createInvite,
+  removeInvite,
+  getInviteQrCode,
+  InviteItem,
+} from '../../services/project'
+import { shootText, expireText, packageText, formatTime } from '../../utils/format'
+import { UPLOAD_PAGE_URL } from '../../env'
 import { Project } from '../../types'
+
+/**
+ * 摄影师端 · 项目工作台
+ * 三区块按拍照流程排：① 照片（上传引导） ② 模特（最多 5 位） ③ 结果
+ */
+
+const MAX_MODELS = 5
+
+/** 复制邀请链接后弹窗里的补充说明 */
+const INVITE_LINK_HINT =
+  '\n\n小程序未认证时「分享」和「小程序码」会被微信禁用，把这串路径填到开发者工具的自定义编译参数里即可自测；认证通过后可直接分享给模特。'
+
+interface ModelVM {
+  inviteId: string
+  modelId: string
+  token: string
+  name: string
+  status: string
+  statusClass: string
+  progress: string
+}
 
 Page({
   data: {
     id: '',
     loading: true,
     project: null as Project | null,
-    statusText: '',
-    expireText: '',
-    /** 上传码是否仍在有效期内 */
+    shoot: '',
+    expire: '',
+    pkg: '',
+    note: '',
+
+    /** ① 照片 */
     hasCode: false,
+    code: '——',
     codeExpireText: '',
     issuing: false,
-    /** 模特选片小程序码（云存储 fileID，image 组件可直接显示） */
+    uploadUrl: UPLOAD_PAGE_URL,
+    showUpload: false,
+
+    /** ② 模特 */
+    models: [] as ModelVM[],
+    modelCountText: '0 / ' + MAX_MODELS,
+    showInvite: false,
+    inviteName: '',
+    inviting: false,
     qrFileID: '',
+    qrModelId: '',
     qrMaking: false,
+
+    /** 结果 */
+    submittedCount: 0,
   },
 
   onLoad(this: any, query: Record<string, string>) {
@@ -29,99 +76,255 @@ Page({
   async load(this: any) {
     this.setData({ loading: true })
     const res = await getProject(this.data.id)
+    this.setData({ loading: false })
     if (!res.ok || !res.data) {
-      this.setData({ loading: false })
       ;(wx as any).showModal({ title: '加载失败', content: res.error || '', showCancel: false })
       return
     }
-    const p = res.data.project
+    const p: Project = res.data.project
+    const invites: InviteItem[] = res.data.invites || []
+    const tokenMap: Record<string, string> = {}
+    invites.forEach((i) => {
+      tokenMap[i.modelId] = i.token
+    })
+
+    const models: ModelVM[] = (p.models || []).map((m) => ({
+      inviteId: inviteIdOf(invites, m.modelId),
+      modelId: m.modelId,
+      token: tokenMap[m.modelId] || '',
+      name: m.name,
+      status: m.status,
+      statusClass:
+        m.status === '已提交' ? 'green' : m.status === '选片中' ? 'amber' : '',
+      progress:
+        m.status === '已提交'
+          ? `已提交 ${m.selectedCount} 张`
+          : `已选 ${m.selectedCount} / ${packageText(p.packageCount)}`,
+    }))
+
     const hasCode = !!p.uploadCode && p.uploadCodeExpireAt > Date.now()
     this.setData({
-      loading: false,
       project: p,
-      statusText: statusText(p.status),
-      expireText: formatDate(p.expireAt),
+      shoot: shootText(p.shootDate),
+      expire: expireText(p.expireAt),
+      pkg: packageText(p.packageCount),
+      note: p.note || '',
+      models,
+      modelCountText: `${models.length} / ${MAX_MODELS}`,
+      submittedCount: (p.models || []).filter((m) => m.status === '已提交').length,
       hasCode,
+      code: hasCode ? p.uploadCode : '——',
       codeExpireText: hasCode ? formatTime(p.uploadCodeExpireAt) : '',
     })
+  },
+
+  /* ---------- ① 照片：上传引导 ---------- */
+
+  openUpload(this: any) {
+    this.setData({ showUpload: true })
+    if (!this.data.hasCode) this.generateCode()
+  },
+
+  closeUpload(this: any) {
+    this.setData({ showUpload: false })
   },
 
   async generateCode(this: any) {
     if (this.data.issuing) return
     this.setData({ issuing: true })
     const res = await issueUploadCode(this.data.id)
+    this.setData({ issuing: false })
     if (!res.ok || !res.data) {
-      this.setData({ issuing: false })
-      ;(wx as any).showModal({ title: '签发失败', content: res.error || '', showCancel: false })
+      ;(wx as any).showToast({ title: res.error || '生成失败', icon: 'none' })
       return
     }
-    const p = this.data.project as Project
     this.setData({
-      issuing: false,
       hasCode: true,
-      'project.uploadCode': res.data.uploadCode,
+      code: res.data.uploadCode,
       codeExpireText: formatTime(res.data.uploadCodeExpireAt),
     })
-    void p
-    ;(wx as any).showToast({ title: '已生成，5 分钟内有效', icon: 'none' })
   },
 
-  copyCode(this: any) {
-    const p = this.data.project
-    if (p && p.uploadCode) {
-      ;(wx as any).setClipboardData({ data: p.uploadCode })
-    }
+  copyUploadInfo(this: any) {
+    const text = `${this.data.uploadUrl}\n上传码：${this.data.code}`
+    ;(wx as any).setClipboardData({
+      data: text,
+      success: () => {
+        ;(wx as any).showToast({ title: '已复制，去电脑粘贴', icon: 'none' })
+      },
+    })
   },
 
-  /** 生成模特选片小程序码 */
-  async makeQrCode(this: any) {
-    if (this.data.qrMaking) return
-    this.setData({ qrMaking: true })
-    const res = await getQrCode(this.data.id)
-    this.setData({ qrMaking: false })
-    if (!res.ok || !res.data) {
-      ;(wx as any).showModal({ title: '生成失败', content: res.error || '', showCancel: false })
+  /** 点网址框：只复制网址（电脑微信里复制即进电脑剪贴板，粘贴即可打开） */
+  copyUploadUrl(this: any) {
+    ;(wx as any).setClipboardData({
+      data: this.data.uploadUrl,
+      success: () => {
+        ;(wx as any).showToast({ title: '网址已复制，去浏览器粘贴打开', icon: 'none' })
+      },
+    })
+  },
+
+  /** 点上传码框：只复制上传码 */
+  copyUploadCode(this: any) {
+    ;(wx as any).setClipboardData({
+      data: this.data.code,
+      success: () => {
+        ;(wx as any).showToast({ title: '上传码已复制', icon: 'none' })
+      },
+    })
+  },
+
+  /* ---------- ② 模特 ---------- */
+
+  openInviteModal(this: any) {
+    if ((this.data.project as Project).models.length >= MAX_MODELS) {
+      ;(wx as any).showToast({ title: `最多 ${MAX_MODELS} 位模特`, icon: 'none' })
       return
     }
-    this.setData({ qrFileID: res.data.fileID })
+    this.setData({ showInvite: true, inviteName: '' })
   },
 
-  openResult(this: any) {
-    wx.navigateTo({ url: '/pages/selection-result/index?id=' + this.data.id })
+  closeInviteModal(this: any) {
+    this.setData({ showInvite: false })
   },
 
-  /**
-   * 复制选片入口链接。
-   * 小程序未完成认证时，「生成小程序码」和「分享给模特」会被微信禁用，
-   * 此时复制该链接手动填到开发者工具的自定义编译参数即可自测。
-   * 认证通过后可删除本方法及页面上的对应按钮。
-   */
-  copyTestLink(this: any) {
-    const p = this.data.project
-    if (!p || !p.accessToken) {
-      ;(wx as any).showToast({ title: '项目未加载', icon: 'none' })
+  onInviteName(this: any, e: any) {
+    this.setData({ inviteName: e.detail.value })
+  },
+
+  async confirmInvite(this: any) {
+    const name = this.data.inviteName.trim()
+    if (!name) {
+      ;(wx as any).showToast({ title: '请填写模特名字', icon: 'none' })
       return
     }
-    const path = '/pages/client-select/index?t=' + p.accessToken
+    this.setData({ inviting: true })
+    const res = await createInvite(this.data.id, name)
+    this.setData({ inviting: false })
+    if (!res.ok) {
+      ;(wx as any).showModal({ title: '邀请失败', content: res.error || '', showCancel: false })
+      return
+    }
+    this.setData({ showInvite: false })
+    ;(wx as any).showToast({ title: '已生成邀请链接', icon: 'success' })
+    await this.load()
+  },
+
+  copyInviteLink(this: any, e: any) {
+    const idx = Number(e.currentTarget.dataset.index)
+    const m = this.data.models[idx]
+    if (!m) return
+    const path = `/pages/client-select/index?t=${m.token}`
     ;(wx as any).setClipboardData({
       data: path,
       success: () => {
         ;(wx as any).showModal({
-          title: '已复制选片入口链接',
-          content: 'token：' + p.accessToken + '\n\n把上面这串字符（注意大小写）填到开发者工具自定义编译的 query 参数里，或项目根目录 project.private.config.json 的 t= 后面。',
+          title: `${m.name} 的邀请链接`,
+          content: path + INVITE_LINK_HINT,
           showCancel: false,
         })
       },
     })
   },
 
-  /** 分享给模特：卡片携带 accessToken，模特点开直接进项目 */
+  async makeQrCode(this: any, e: any) {
+    const idx = Number(e.currentTarget.dataset.index)
+    const m = this.data.models[idx]
+    if (!m || this.data.qrMaking) return
+    this.setData({ qrMaking: true })
+    const res = await getInviteQrCode(m.inviteId)
+    this.setData({ qrMaking: false })
+    if (!res.ok || !res.data) {
+      ;(wx as any).showModal({ title: '生成失败', content: res.error || '', showCancel: false })
+      return
+    }
+    this.setData({ qrFileID: res.data.fileID, qrModelId: m.modelId })
+  },
+
+  closeQr(this: any) {
+    this.setData({ qrFileID: '', qrModelId: '' })
+  },
+
+  tapRemoveInvite(this: any, e: any) {
+    const idx = Number(e.currentTarget.dataset.index)
+    const m = this.data.models[idx]
+    if (!m) return
+    ;(wx as any).showModal({
+      title: `移除「${m.name}」？`,
+      content: '会同时清空她的选片结果，之后需要重新邀请。',
+      confirmText: '移除',
+      success: async (r: any) => {
+        if (!r.confirm) return
+        const res = await removeInvite(m.inviteId)
+        if (!res.ok) {
+          ;(wx as any).showModal({ title: '操作失败', content: res.error || '', showCancel: false })
+          return
+        }
+        await this.load()
+      },
+    })
+  },
+
+  /* ---------- ③ 结果 ---------- */
+
+  /** 弹层内部空点击，防止冒泡到遮罩导致误关闭 */
+  noop() {},
+
+  openResult(this: any) {
+    ;(wx as any).navigateTo({ url: '/pages/selection-result/index?id=' + this.data.id })
+  },
+
+  /* ---------- 其他 ---------- */
+
+  extend(this: any) {
+    ;(wx as any).showModal({
+      title: '延期 30 天？',
+      content: '项目已过期或快到期时，给模特多留一点选片时间。',
+      confirmText: '延期',
+      success: async (r: any) => {
+        if (!r.confirm) return
+        const res = await extendProject(this.data.id)
+        if (!res.ok) {
+          ;(wx as any).showModal({ title: '操作失败', content: res.error || '', showCancel: false })
+          return
+        }
+        ;(wx as any).showToast({ title: '已延期 30 天', icon: 'success' })
+        await this.load()
+      },
+    })
+  },
+
+  tapRemoveProject(this: any) {
+    ;(wx as any).showModal({
+      title: '删除项目？',
+      content: '会同时删除该项目的邀请、选片和照片记录，云存储里的图片需到控制台手动清理。',
+      confirmText: '删除',
+      success: async (r: any) => {
+        if (!r.confirm) return
+        const res = await removeProject(this.data.id)
+        if (!res.ok) {
+          ;(wx as any).showModal({ title: '删除失败', content: res.error || '', showCancel: false })
+          return
+        }
+        ;(wx as any).navigateBack()
+      },
+    })
+  },
+
+  /** 分享：默认分享第一位模特的邀请链接 */
   onShareAppMessage(this: any) {
-    const p = this.data.project
+    const p: Project = this.data.project
+    const first = this.data.models[0]
     return {
       title: p ? `「${p.name}」照片选片` : '照片选片',
-      path: '/pages/client-select/index?t=' + (p ? p.accessToken : ''),
+      path: first ? `/pages/client-select/index?t=${first.token}` : '/pages/home/index',
       imageUrl: this.data.qrFileID || undefined,
     }
   },
 })
+
+function inviteIdOf(invites: InviteItem[], modelId: string): string {
+  const hit = invites.find((i) => i.modelId === modelId)
+  return hit ? hit._id : ''
+}

@@ -1,8 +1,10 @@
 {
   "pages": [
     "pages/home/index",
+    "pages/guide/index",
     "pages/project-create/index",
     "pages/project-detail/index",
+    "pages/model-home/index",
     "pages/client-select/index",
     "pages/photo-viewer/index",
     "pages/selection-result/index"
@@ -10,7 +12,7 @@
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#000000",
-    "navigationBarTitleText": "选片",
+    "navigationBarTitleText": "摄影选片",
     "navigationBarTextStyle": "white",
     "backgroundColor": "#ffffff"
   },
