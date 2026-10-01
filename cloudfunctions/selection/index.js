@@ -64,14 +64,15 @@ exports.main = async (event = {}) => {
 /* ---------- 身份 ---------- */
 
 async function whoami(openid) {
-  const isAdmin = await isAdmin(openid)
+  // 注意：局部变量不能叫 isAdmin，否则会遮蔽下面的 isAdmin() 函数（报 "Cannot access 'isAdmin' before initialization"）
+  const admin = await isAdmin(openid)
   const m = await db.collection('model').where({ openid }).limit(1).get()
   const model = m.data[0] || null
   return {
     ok: true,
     data: {
       openid,
-      isAdmin,
+      isAdmin: admin,
       isModel: !!model,
       displayName: model ? model.displayName : '',
     },
