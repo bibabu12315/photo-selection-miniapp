@@ -3,6 +3,7 @@
   height: 100vh;
   background: #000;
   position: relative;
+  overflow: hidden;
 }
 
 .hint {
@@ -12,39 +13,48 @@
   font-size: 28rpx;
 }
 
-.swiper {
-  width: 100%;
-  height: 100%;
-}
-
-/* 缩放容器：铺满全屏，movable-view 负责双指缩放和拖动 */
-.zoom-area {
+/* 手势舞台：所有触摸事件在渲染层由 gest.wxs 消费 */
+.stage {
   width: 100%;
   height: 100%;
   overflow: hidden;
 }
 
-.zoom-view {
+/* 翻页轨道：横向排开所有照片，WXS 控制 translateX */
+.track {
+  display: flex;
+  height: 100%;
+  will-change: transform;
+}
+
+.slide {
+  width: 100vw;
+  height: 100%;
+  flex: none;
+}
+
+/* 缩放/拖动作用在这一层，WXS 控制 transform */
+.img-wrap {
   width: 100%;
   height: 100%;
+  will-change: transform;
 }
 
 .big {
   width: 100%;
   height: 100%;
+  pointer-events: none;
 }
 
-/* 放大状态下的还原入口：此时左右滑动已屏蔽，给个明确出口 */
-.reset-zoom {
+.topbar {
   position: absolute;
-  right: 24rpx;
   top: calc(16rpx + env(safe-area-inset-top));
-  padding: 12rpx 28rpx;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  font-size: 24rpx;
-  border-radius: 999rpx;
-  border: 1rpx solid rgba(255, 255, 255, 0.35);
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 26rpx;
+  pointer-events: none;
 }
 
 /* 手势提示气泡：首次进入出现，几秒后消失 */
@@ -62,17 +72,6 @@
   pointer-events: none;
 }
 
-.topbar {
-  position: absolute;
-  top: calc(16rpx + env(safe-area-inset-top));
-  left: 0;
-  right: 0;
-  text-align: center;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 26rpx;
-  pointer-events: none;
-}
-
 .bottombar {
   position: absolute;
   left: 0;
@@ -82,6 +81,11 @@
   align-items: center;
   padding: 24rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+  pointer-events: none;
+}
+
+.bottombar .like {
+  pointer-events: auto;
 }
 
 .filename {
