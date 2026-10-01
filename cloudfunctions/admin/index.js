@@ -21,7 +21,8 @@ exports.main = async (event = {}) => {
   const { OPENID } = cloud.getWXContext()
   const action = event.action || 'status'
 
-  if (!OPENID) {
+  if (!OPENID && action !== 'claimLegacy') {
+    // 云端测试没有登录态；claimLegacy 允许，归属人回落到最早的摄影师
     return { ok: false, error: '取不到 OPENID，请通过小程序端调用' }
   }
 
