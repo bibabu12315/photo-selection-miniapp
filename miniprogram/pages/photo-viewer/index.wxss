@@ -17,9 +17,36 @@
   height: 100%;
 }
 
+/* 缩放容器：铺满全屏，movable-view 负责双指缩放和拖动 */
+.zoom-area {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.zoom-view {
+  width: 100%;
+  height: 100%;
+}
+
 .big {
   width: 100%;
   height: 100%;
+}
+
+/* 手势提示气泡：首次进入出现，几秒后消失 */
+.gesture-hint {
+  position: absolute;
+  top: calc(80rpx + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12rpx 32rpx;
+  background: rgba(0, 0, 0, 0.6);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 24rpx;
+  border-radius: 999rpx;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .topbar {

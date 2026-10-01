@@ -38,10 +38,20 @@
         wx:key="_id"
         data-id="{{item._id}}"
         data-index="{{index}}"
-        bindtap="toggle"
       >
-        <image class="thumb" src="{{item.thumbUrl}}" mode="aspectFill" lazy-load="{{true}}" />
-        <view class="badge {{item.selected ? 'on' : ''}}">{{item.selected ? '✓' : ''}}</view>
+        <!-- 点图片：进全屏大图细看（缩放 / 滑动切图） -->
+        <image
+          class="thumb"
+          src="{{item.thumbUrl}}"
+          mode="aspectFill"
+          lazy-load="{{true}}"
+          data-index="{{index}}"
+          bindtap="openViewer"
+        />
+        <!-- 点圆圈徽章：直接选中/取消（快速批量勾选） -->
+        <view class="badge-hit" catchtap="toggle" data-id="{{item._id}}">
+          <view class="badge {{item.selected ? 'on' : ''}}">{{item.selected ? '✓' : ''}}</view>
+        </view>
       </view>
     </view>
 

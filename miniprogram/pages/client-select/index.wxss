@@ -137,10 +137,15 @@
   height: 100%;
 }
 
-.badge {
+/* 徽章外层点击热区：视觉圆圈不变，可点面积更大，好按 */
+.badge-hit {
   position: absolute;
-  right: 12rpx;
-  top: 12rpx;
+  right: 0;
+  top: 0;
+  padding: 12rpx;
+}
+
+.badge {
   width: 44rpx;
   height: 44rpx;
   line-height: 40rpx;
