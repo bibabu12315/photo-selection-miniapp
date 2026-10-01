@@ -72,6 +72,7 @@ Page({
   onUnload(this: any) {
     if (this.hintTimer) clearTimeout(this.hintTimer)
     if (this.tapTimer) clearTimeout(this.tapTimer)
+    if (this.scaleTimer) clearTimeout(this.scaleTimer)
   },
 
   onSwiper(this: any, e: any) {
@@ -81,12 +82,33 @@ Page({
     this.preloadNeighbor()
   },
 
-  /** 捏合缩放回调：记录当前倍率，>1 才允许拖动（否则拖动会和左右切换打架） */
+  /**
+   * 放大状态下，movable-view 的拖动手势会被外层的 swiper 抢走（表现为放大后拖不动图片）。
+   * 这里用 catch:htouchmove / catch:vtouchmove 在放大时把事件拦下来，
+   * 缩回 1 倍后自动解除，左右滑动切图恢复。
+   * 这两个方法只是占位，被拦截后不做事，重点是阻止事件冒泡到 swiper。
+   */
+  blockSwiper(this: any) {},
+
+  /** 捏合缩放回调：记录当前倍率；>1 视为放大，开启拖动并屏蔽 swiper */
   onScale(this: any, e: any) {
     const scale = (e.detail && e.detail.scale) || 1
-    if ((scale > 1.05) !== this.data.zoomed) {
-      this.setData({ zoomed: scale > 1.05 })
-    }
+    const zoomed = scale > 1.05
+    if (zoomed !== this.data.zoomed) this.setData({ zoomed })
+    // 缩放结束后把 scale-value 同步成真实倍率，避免重渲染把图片弹回 1 倍
+    if (this.scaleTimer) clearTimeout(this.scaleTimer)
+    this.scaleTimer = setTimeout(() => {
+      if (Math.abs(scale - this.data.zoomValue) > 0.01) {
+        this.setData({ zoomValue: scale, zoomed: scale > 1.05 })
+      }
+    }, 150)
+  },
+
+  scaleTimer: 0 as any,
+
+  /** 缩回原始大小，恢复左右滑动切图 */
+  resetZoom(this: any) {
+    this.setData({ zoomValue: 1, zoomed: false })
   },
 
   /**

@@ -34,6 +34,19 @@
   height: 100%;
 }
 
+/* 放大状态下的还原入口：此时左右滑动已屏蔽，给个明确出口 */
+.reset-zoom {
+  position: absolute;
+  right: 24rpx;
+  top: calc(16rpx + env(safe-area-inset-top));
+  padding: 12rpx 28rpx;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 24rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.35);
+}
+
 /* 手势提示气泡：首次进入出现，几秒后消失 */
 .gesture-hint {
   position: absolute;
