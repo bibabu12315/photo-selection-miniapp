@@ -7,6 +7,9 @@ miniprogram/node_modules/
 .idea/
 project.private.config.json
 
+# 工作记忆（本地会话数据，不上传）
+.workbuddy/
+
 # 构建产物
 dist/
 *.log
