@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>选片小程序 · 定价与成本测算器 v2</title>
+<style>
+  :root{
+    --bg:#f7f7f5; --card:#ffffff; --line:rgba(0,0,0,.10); --line2:rgba(0,0,0,.18);
+    --tx:#1f1f1d; --tx2:#6b6a65; --tx3:#94938d;
+    --blue:#185FA5; --blue-bg:#E6F1FB; --red:#A32D2D; --red-bg:#FCEBEB;
+    --green:#3B6D11; --green-bg:#EAF3DE; --amber:#854F0B; --amber-bg:#FAEEDA;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--tx);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    font-size:14px;line-height:1.6;}
+  .wrap{max-width:1100px;margin:0 auto;padding:32px 24px 64px;}
+  h1{font-size:20px;font-weight:500;margin:0 0 4px;}
+  h2{font-size:14px;font-weight:500;margin:0 0 12px;}
+  .sub{font-size:13px;color:var(--tx2);margin:0 0 20px;}
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:20px;align-items:start;}
+  @media(max-width:860px){.grid{grid-template-columns:1fr;}}
+  .card{background:var(--card);border:0.5px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:16px;}
+  .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:6px 0;}
+  .row label{font-size:13px;color:var(--tx2);}
+  .row .val{font-variant-numeric:tabular-nums;font-size:13px;font-weight:500;}
+  input[type=number]{width:88px;padding:5px 8px;border:0.5px solid var(--line2);border-radius:6px;
+    background:var(--card);color:var(--tx);font-size:13px;font-family:inherit;text-align:right;}
+  input[type=range]{width:100%;accent-color:var(--blue);}
+  .field{margin-bottom:14px;}
+  .field .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;}
+  .field .name{font-size:13px;color:var(--tx2);}
+  .field .num{font-size:13px;font-weight:500;font-variant-numeric:tabular-nums;}
+  .hint{font-size:11px;color:var(--tx3);margin-top:2px;line-height:1.6;}
+  .presets{display:flex;gap:8px;flex-wrap:wrap;}
+  button{padding:7px 12px;border:0.5px solid var(--line2);background:var(--card);color:var(--tx);
+    border-radius:8px;font-size:12.5px;font-family:inherit;cursor:pointer;}
+  button:hover{border-color:var(--blue);color:var(--blue);}
+  .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;}
+  .kpi>div{background:var(--card);border:0.5px solid var(--line);border-radius:10px;padding:12px 14px;}
+  .kpi .lb{font-size:12px;color:var(--tx2);}
+  .kpi .vv{font-size:22px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px;}
+  .bad{color:var(--red);} .good{color:var(--green);} .warn{color:var(--amber);}
+  .verdict{padding:12px 14px;border-radius:10px;font-size:13px;line-height:1.65;margin-bottom:16px;}
+  .verdict.bad{background:var(--red-bg);color:var(--red);}
+  .verdict.good{background:var(--green-bg);color:var(--green);}
+  .verdict.warn{background:var(--amber-bg);color:var(--amber);}
+  .bar{margin-bottom:11px;}
+  .bar .top{display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);margin-bottom:3px;}
+  .track{height:7px;background:rgba(0,0,0,.07);border-radius:4px;overflow:hidden;}
+  .fill{height:100%;border-radius:4px;transition:width .18s linear;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{text-align:left;padding:7px 6px;border-bottom:0.5px solid var(--line);}
+  th{color:var(--tx2);font-weight:400;font-size:12px;}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;}
+  .note{font-size:12px;color:var(--tx2);line-height:1.75;}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;background:rgba(0,0,0,.05);padding:1px 4px;border-radius:4px;}
+  .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:5px;background:var(--blue-bg);color:var(--blue);margin-left:6px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>摄影选片小程序 · 定价与成本测算器 <span class="tag">v2 按真实接单频率</span></h1>
+  <p class="sub">模型已修正为「套餐费 + 超出部分按量计费」，而不是把套餐费摊到极限吞吐上——大多数月份配额用不满，边际成本接近 0。</p>
+
+  <div class="card">
+    <h2>场景预设</h2>
+    <div class="presets">
+      <button id="q1">起步：20 免费 / 10 付费，原始规格 preview 0.55</button>
+      <button id="q2">推荐：20 免费 / 10 付费，preview 降到 0.25</button>
+      <button id="q3">规模：50 免费 / 30 付费，preview 0.25</button>
+      <button id="q4">失控：80 免费 / 40 付费，项目不清理</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>① 固定成本</h2>
+        <div class="row"><label>云开发套餐 元/月</label><input type="number" id="plan" value="19.9" step="0.1" min="0"></div>
+        <div class="row"><label>小程序认证 元/年</label><input type="number" id="cert" value="30" step="1" min="0"></div>
+        <div class="row"><label>个体工商户 元/年（0=不办）</label><input type="number" id="biz" value="300" step="50" min="0"></div>
+        <div class="row"><label>支付手续费 %</label><input type="number" id="fee" value="0.6" step="0.1" min="0"></div>
+        <div class="row"><label>月固定成本合计</label><span class="val" id="fixed">—</span></div>
+      </div>
+
+      <div class="card">
+        <h2>② 单张照片规格</h2>
+        <div class="field">
+          <div class="top"><span class="name">preview 体积</span><span class="num"><span id="pvNum">0.25</span> MB</span></div>
+          <input type="range" id="pv" min="0.12" max="1.50" step="0.01" value="0.25">
+          <div class="hint">0.55 = 现在（长边 2048 / q82）；0.25 = 建议（长边 1600 / q75），手机上看几乎无差别。</div>
+        </div>
+        <div class="field">
+          <div class="top"><span class="name">thumbnail 体积</span><span class="num"><span id="tbNum">0.04</span> MB</span></div>
+          <input type="range" id="tb" min="0.01" max="0.15" step="0.01" value="0.04">
+        </div>
+        <div class="row"><label>每张图占用</label><span class="val" id="perPhoto">—</span></div>
+      </div>
+
+      <div class="card">
+        <h2>③ 免费用户（漏斗层）</h2>
+        <div class="field"><div class="top"><span class="name">人数</span><span class="num" id="fnN">20</span></div><input type="range" id="fn" min="0" max="200" step="5" value="20"></div>
+        <div class="field"><div class="top"><span class="name">每人月项目数</span><span class="num" id="fpN">1</span></div><input type="range" id="fp" min="1" max="8" step="1" value="1"></div>
+        <div class="field"><div class="top"><span class="name">单项目照片上限</span><span class="num" id="fhN">150</span></div><input type="range" id="fh" min="50" max="400" step="10" value="150"></div>
+        <div class="field"><div class="top"><span class="name">项目存活天数</span><span class="num" id="fdN">30 天</span></div><input type="range" id="fd" min="7" max="366" step="1" value="30"></div>
+      </div>
+
+      <div class="card">
+        <h2>④ 付费用户（收入层）</h2>
+        <div class="field"><div class="top"><span class="name">人数</span><span class="num" id="pnN">10</span></div><input type="range" id="pn" min="1" max="200" step="1" value="10"></div>
+        <div class="field"><div class="top"><span class="name">每人月项目数</span><span class="num" id="ppN">2</span></div><input type="range" id="pp" min="1" max="10" step="1" value="2"></div>
+        <div class="field"><div class="top"><span class="name">单项目照片上限</span><span class="num" id="phN">250</span></div><input type="range" id="ph" min="50" max="800" step="10" value="250"></div>
+        <div class="field"><div class="top"><span class="name">项目存活天数</span><span class="num" id="pdN">30 天</span></div><input type="range" id="pd" min="7" max="366" step="1" value="30"></div>
+        <div class="field"><div class="top"><span class="name">每项目模特数</span><span class="num" id="mdN">2</span></div><input type="range" id="md" min="1" max="5" step="1" value="2"></div>
+      </div>
+
+      <div class="card">
+        <h2>⑤ 定价</h2>
+        <div class="field">
+          <div class="top"><span class="name">月付价 元/月</span><span class="num" id="prN">4.9</span></div>
+          <input type="range" id="pr" min="0" max="30" step="0.5" value="4.9">
+        </div>
+        <div class="row"><label>年付建议标价（8.5 折）</label><span class="val" id="yr">—</span></div>
+        <div class="row"><label>年付折合月均</label><span class="val" id="yrm">—</span></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="verdict" id="verdict">—</div>
+
+      <div class="kpi">
+        <div><div class="lb">月照片吞吐</div><div class="vv" id="kVol">—</div></div>
+        <div><div class="lb">实际云账单</div><div class="vv" id="kBill">—</div></div>
+        <div><div class="lb">月净利</div><div class="vv" id="kNet">—</div></div>
+        <div><div class="lb">单付费用户成本</div><div class="vv" id="kUnit">—</div></div>
+      </div>
+
+      <div class="card">
+        <h2>配额使用（19.9 基础套餐口径）</h2>
+        <div class="bar"><div class="top"><span>调用次数 20 万/月</span><span id="bCT">—</span></div><div class="track"><div class="fill" id="bC" style="width:0;background:#185FA5"></div></div></div>
+        <div class="bar"><div class="top"><span>容量 2GB（占用，不清零）</span><span id="bAT">—</span></div><div class="track"><div class="fill" id="bA" style="width:0;background:#BA7517"></div></div></div>
+        <div class="bar"><div class="top"><span>CDN 流量 5GB/月</span><span id="bDT">—</span></div><div class="track"><div class="fill" id="bD" style="width:0;background:#639922"></div></div></div>
+        <div class="hint" id="room">—</div>
+      </div>
+
+      <div class="card">
+        <h2>账单拆解</h2>
+        <table>
+          <thead><tr><th>项目</th><th class="n">用量</th><th class="n">费用</th></tr></thead>
+          <tbody id="billBody"><tr><td colspan="3">—</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>盈亏 sensitivity</h2>
+        <table>
+          <thead><tr><th>付费用户数</th><th class="n">收入</th><th class="n">云账单</th><th class="n">净利</th></tr></thead>
+          <tbody id="simBody"><tr><td colspan="4">—</td></tr></tbody>
+        </table>
+        <div class="hint">免费用户数固定为当前设定值，只放大付费规模。</div>
+      </div>
+
+      <div class="card">
+        <h2>口径说明</h2>
+        <div class="note">
+          · 调用次数为合并口径：云函数调用 + 数据库读写 + 存储上传下载计同一额度。单张上传约 4 次，模特浏览一遍约 13 次。<br>
+          · 超出套餐后按官方量价：调用 <code>0.5 元/万次</code>、容量 <code>0.1 元/GB/日</code>、CDN <code>0.21 元/GB</code>。<br>
+          · 容量稳态 = 月照片量 × 单张体积 × 存活月数。项目不清理时会持续累积，这是最危险的一项。<br>
+          · 上行流量由电脑浏览器上传产生，走的是 CDN 回源，不计入云函数调用；此处的三联单均在套餐配额内。<br>
+          · 网页端上传本身不消耗服务器端计算资源，压缩在浏览器 canvas 内完成，这正是这套架构的省钱点。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note" style="margin-top:22px;">
+    数据基准：微信云开发基础套餐官方配额（调用 20 万次/月、容量 2GB、CDN 5GB/月、云函数资源 10 万 GBs）。实际用量请以云开发控制台「用量统计」为准，本表用于数量级判断与方案比选。
+  </p>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var CALLQ = 200000, CAPQ = 2048, CDNQ = 5120;
+  var P_CALL = 0.5 / 10000, P_CAP = 0.1 * 30, P_CDN = 0.21;
+
+  function n(id){ return parseFloat($(id).value) || 0; }
+  function fmt(v, d){ return v.toLocaleString(undefined, {minimumFractionDigits: d || 0, maximumFractionDigits: d || 0}); }
+
+  function calc(){
+    var planFee = n('plan');
+    var fixedMonthly = planFee + n('cert') / 12 + n('biz') / 12;
+    var pv = n('pv'), tb = n('tb'), perPhoto = pv + tb;
+
+    var fnN = n('fn'), fp = n('fp'), fh = n('fh'), fd = n('fd');
+    var pnN = n('pn'), pp = n('pp'), ph = n('ph'), pd = n('pd'), md = n('md');
+    var price = n('pr'), fee = n('fee');
+
+    var freePhotos = fnN * fp * fh;
+    var paidPhotos = pnN * pp * ph;
+    var totalPhotos = freePhotos + paidPhotos;
+
+    var lifeF = Math.max(fd / 30, 7 / 30);
+    var lifeP = Math.max(pd / 30, 7 / 30);
+
+    var callUsage = totalPhotos * 17;
+    var cdnMB = totalPhotos * (tb + 0.3 * pv) * md * 1.5;
+    var capMB = freePhotos * perPhoto * lifeF + paidPhotos * perPhoto * lifeP;
+
+    var overCall = Math.max(0, callUsage - CALLQ) * P_CALL;
+    var overCap = Math.max(0, (capMB - CAPQ)) / 1024 * P_CAP;
+    var overCdn = Math.max(0, (cdnMB - CDNQ)) / 1024 * P_CDN;
+    var bill = planFee + overCall + overCap + overCdn;
+
+    var revenue = pnN * price * (1 - fee / 100);
+    var net = revenue - bill - n('cert') / 12 - n('biz') / 12;
+
+    var paidCostShare = totalPhotos > 0 ? (bill * paidPhotos / totalPhotos) : 0;
+    var perPaidUser = pnN > 0 ? paidCostShare / pnN : 0;
+
+    $('fixed').textContent = fixedMonthly.toFixed(1) + ' 元/月';
+    $('perPhoto').textContent = Math.round(perPhoto * 1024) + ' KB';
+    $('kVol').textContent = fmt(totalPhotos) + ' 张';
+    $('kBill').textContent = bill.toFixed(1) + ' 元';
+    $('kNet').textContent = (net >= 0 ? '+' : '') + net.toFixed(1) + ' 元';
+    $('kNet').className = 'vv ' + (net >= 0 ? 'good' : 'bad');
+    $('kUnit').textContent = perPaidUser.toFixed(2) + ' 元';
+    $('kUnit').className = 'vv ' + (perPaidUser < price * 0.5 ? 'good' : (perPaidUser < price ? 'warn' : 'bad'));
+    $('yr').textContent = Math.round(price * 12 * 0.85 / 5) * 5 + ' 元/年';
+    $('yrm').textContent = (price * 0.85).toFixed(2) + ' 元/月';
+
+    ['fnN:'+fnN,'fpN:'+fp,'fhN:'+fh,'pnN:'+pnN,'ppN:'+pp,'phN:'+ph,'mdN:'+md,'prN:'+price.toFixed(1),
+     'pvNum:'+pv.toFixed(2),'tbNum:'+tb.toFixed(2),
+     'fdN:'+(fd>=366?'永不过期':fd+' 天'),'pdN:'+(pd>=366?'永不过期':pd+' 天')].forEach(function(s){
+      var p = s.split(':'), el = $(p[0]); if(el) el.textContent = p[1];
+    });
+
+    function bar(idv, idt, usage, quota, unitTxt, dp){
+      var pct = Math.min(usage / quota * 100, 100);
+      $(idv).style.width = pct + '%';
+      $(idv).style.background = usage > quota ? '#E24B4A' : $(idv).dataset.c;
+      var txt = usage.toLocaleString(undefined, {minimumFractionDigits: dp || 0, maximumFractionDigits: dp || 0});
+      $(idt).textContent = txt + unitTxt + ' (' + pct.toFixed(0) + '%)' + (usage > quota ? ' 已超，开始按量计费' : '');
+    }
+    $('bC').dataset.c = '#185FA5'; $('bA').dataset.c = '#BA7517'; $('bD').dataset.c = '#639922';
+    bar('bC','bCT', callUsage, CALLQ, ' 次', 0);
+    bar('bA','bAT', capMB / 1024, CAPQ / 1024, ' GB', 2);
+    bar('bD','bDT', cdnMB / 1024, CDNQ / 1024, ' GB', 2);
+
+    var headRooms = [];
+    var perPaid = { c: 0, a: 0, d: 0 };
+    if(totalPhotos > 0 && pnN > 0){
+      perPaid = { c: pp*ph*17, a: pp*ph*perPhoto*lifeP, d: pp*ph*(tb+0.3*pv)*md*1.5 };
+      headRooms.push(Math.max(0,(CALLQ-callUsage))/perPaid.c);
+      headRooms.push(Math.max(0,(CAPQ-capMB))/perPaid.a);
+      headRooms.push(Math.max(0,(CDNQ-cdnMB))/perPaid.d);
+    }
+    var room = headRooms.length ? Math.floor(Math.min.apply(null, headRooms)) : 0;
+    var marginal = perPaid.c*P_CALL + perPaid.a/1024*P_CAP + perPaid.d/1024*P_CDN;
+    if(room > 0){
+      $('room').textContent = '配额还能再容纳约 ' + room + ' 个付费用户（之后开始按量计费），当前每多一个用户基本不花钱。';
+    } else {
+      $('room').textContent = '配额已满，此后每增加 1 个付费用户按量计费约 ' + marginal.toFixed(2) + ' 元/月——相对 ' + price.toFixed(1) + ' 元的售价仍有余量，不必急着升级套餐。';
+    }
+
+    var rows = [
+      ['云开发套餐', planFee.toFixed(1) + ' 元/月基础费', planFee.toFixed(2)],
+      ['调用次数超量', fmt(Math.max(0, callUsage - CALLQ)) + ' 次', overCall.toFixed(2)],
+      ['容量超量', fmt(Math.max(0, (capMB - CAPQ)/1024*100)/100) + ' GB', overCap.toFixed(2)],
+      ['CDN 超量', fmt(Math.max(0, (cdnMB - CDNQ)/1024*100)/100) + ' GB', overCdn.toFixed(2)],
+      ['认证 + 个体户', '年费折月', (n('cert')/12 + n('biz')/12).toFixed(2)],
+      ['合计', '—', (bill + n('cert')/12 + n('biz')/12).toFixed(2)]
+    ].map(function(r){
+      return '<tr><td>' + r[0] + '</td><td class="n">' + r[1] + '</td><td class="n">' + r[2] + '</td></tr>';
+    }).join('');
+    $('billBody').innerHTML = rows;
+
+    var sim = [pnN*2, pnN*4, pnN*8].map(function(k){
+      var pPaid = k * pp * ph;
+      var tP = freePhotos + pPaid;
+      var cU = tP * 17, cdU = tP * (tb+0.3*pv)*md*1.5, caU = freePhotos*perPhoto*lifeF + pPaid*perPhoto*lifeP;
+      var b = planFee + Math.max(0,cU-CALLQ)*P_CALL + Math.max(0,caU-CAPQ)/1024*P_CAP + Math.max(0,cdU-CDNQ)/1024*P_CDN;
+      var rv = k * price * (1-fee/100);
+      var pf = rv - b - n('cert')/12 - n('biz')/12;
+      return '<tr><td>' + k + ' 人</td><td class="n">' + rv.toFixed(1) + '</td><td class="n">' + b.toFixed(1) + '</td><td class="n ' + (pf>=0?'good':'bad') + '">' + (pf>=0?'+':'') + pf.toFixed(1) + '</td></tr>';
+    });
+    sim.unshift('<tr><td>' + pnN + ' 人（当前）</td><td class="n">' + revenue.toFixed(1) + '</td><td class="n">' + bill.toFixed(1) + '</td><td class="n ' + (net>=0?'good':'bad') + '">' + (net>=0?'+':'') + net.toFixed(1) + '</td></tr>');
+    $('simBody').innerHTML = sim.join('');
+
+    var v = $('verdict');
+    var unitTxt = perPaidUser.toFixed(2);
+    if(net < 0){
+      v.className = 'verdict bad';
+            v.innerHTML = '<strong>当前配置亏损 ' + Math.abs(net).toFixed(1) + ' 元/月。</strong>单付费用户资源成本 ' + unitTxt + ' 元 vs 售价 ' + price.toFixed(1) + ' 元。优先做三件事：把 preview 降到 0.25、项目存活天数压到 30 天、把免费用户额度收紧。';
+    } else if(perPaidUser > price * 0.6){
+      v.className = 'verdict warn';
+      v.innerHTML = '<strong>净利 ' + net.toFixed(1) + ' 元/月，但毛利偏薄。</strong>单付费用户已占掉售价的 ' + Math.round(perPaidUser/price*100) + '%。规模再放大就翻负，建议先把 preview 降到 0.25MB、项目 30 天过期这两件事做掉，成本能砍一半以上。';
+    } else if(net < 20){
+      v.className = 'verdict warn';
+      v.innerHTML = '<strong>刚过盈亏线，净利仅 ' + net.toFixed(1) + ' 元/月。</strong>单付费用户资源成本 ' + unitTxt + ' 元，毛利率本身没问题，瓶颈在固定成本：' + fixedMonthly.toFixed(1) + ' 元/月里，认证+个体户占 ' + (n('cert')/12 + n('biz')/12).toFixed(1) + ' 元。再多 ' + Math.ceil((20 - net) / Math.max(price*(1-fee/100), 0.01)) + ' 个付费用户即可到 +20 元。';
+    } else {
+      v.className = 'verdict good';
+      v.innerHTML = '<strong>健康。</strong>月净利 ' + net.toFixed(1) + ' 元，单付费用户资源成本仅 ' + unitTxt + ' 元（占售价 ' + Math.round(perPaidUser/price*100) + '%），毛利率 ' + Math.round((1-perPaidUser/price)*100) + '%）。' + (room > 0 ? '配额还能再容纳约 ' + room + ' 个付费用户。' : '配额已满，此后新增一个付费用户按量计费约 ' + marginal.toFixed(2) + ' 元/月，规模越大单位成本越低。');
+    }
+  }
+
+  ['plan','cert','biz','fee','pv','tb','fn','fp','fh','fd','pn','pp','ph','pd','md','pr'].forEach(function(id){
+    $(id).addEventListener('input', calc);
+  });
+
+  function set(o){ Object.keys(o).forEach(function(k){ $(k).value = o[k]; }); calc(); }
+  $('q1').onclick = function(){ set({plan:19.9,cert:30,biz:300,fee:0.6,pv:0.55,tb:0.04,fn:20,fp:1,fh:150,fd:30,pn:10,pp:2,ph:250,pd:30,md:2,pr:4.9}); };
+  $('q2').onclick = function(){ set({plan:19.9,cert:30,biz:300,fee:0.6,pv:0.25,tb:0.04,fn:20,fp:1,fh:150,fd:30,pn:10,pp:2,ph:250,pd:30,md:2,pr:4.9}); };
+  $('q3').onclick = function(){ set({plan:19.9,cert:30,biz:300,fee:0.6,pv:0.25,tb:0.04,fn:50,fp:1,fh:150,fd:30,pn:30,pp:2,ph:250,pd:30,md:2,pr:4.9}); };
+  $('q4').onclick = function(){ set({plan:19.9,cert:30,biz:300,fee:0.6,pv:0.55,tb:0.04,fn:80,fp:2,fh:200,fd:120,pn:40,pp:3,ph:300,pd:120,md:2,pr:4.9}); };
+
+  calc();
+})();
+</script>
+</body>
+</html>
