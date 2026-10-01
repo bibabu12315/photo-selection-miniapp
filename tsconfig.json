@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "module": "CommonJS",
+    "target": "ES2018",
+    "moduleResolution": "node",
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "lib": ["ES2018", "DOM"],
+    "typeRoots": ["./typings"]
+  },
+  "include": ["./miniprogram/**/*.ts"],
+  "exclude": ["node_modules", "cloudfunctions", "web"]
+}

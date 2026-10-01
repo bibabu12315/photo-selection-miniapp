@@ -1,0 +1,28 @@
+<view class="page">
+  <view wx:if="{{!ready}}" class="hint">加载中…</view>
+
+  <block wx:else>
+    <swiper class="swiper" current="{{current}}" bindchange="onSwiper">
+      <swiper-item wx:for="{{photos}}" wx:key="_id">
+        <image
+          class="big"
+          src="{{index === current ? previewUrl : item.thumbUrl}}"
+          mode="aspectFit"
+          bindtap="toggleLike"
+        />
+      </swiper-item>
+    </swiper>
+
+    <view class="topbar">
+      {{current + 1}} / {{photos.length}}
+    </view>
+
+    <view class="bottombar">
+      <view class="filename">{{photos[current].filename}}</view>
+      <view
+        class="like {{photos[current].selected ? 'on' : ''}} {{locked ? 'disabled' : ''}}"
+        bindtap="toggleLike"
+      >{{photos[current].selected ? '✓ 已选' : '♡ 喜欢'}}</view>
+    </view>
+  </block>
+</view>

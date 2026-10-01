@@ -1,0 +1,179 @@
+.page {
+  min-height: 100vh;
+  background: #0d0d0d;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.center {
+  margin-top: 30vh;
+  text-align: center;
+  color: #999;
+  font-size: 28rpx;
+  padding: 0 60rpx;
+}
+
+.err-icon {
+  font-size: 80rpx;
+  margin-bottom: 24rpx;
+}
+
+.err-text {
+  line-height: 1.8;
+}
+
+/* 失败重试入口：弱网时可点击重来，而不是只有一个 toast */
+.retry-btn {
+  display: inline-block;
+  margin-top: 24rpx;
+  padding: 14rpx 40rpx;
+  font-size: 26rpx;
+  color: #ccc;
+  border: 1rpx solid #444;
+  border-radius: 999rpx;
+}
+
+.more.retry-btn {
+  display: block;
+  margin: 24rpx auto;
+  padding: 16rpx 0;
+  width: 320rpx;
+  border: 1rpx solid #444;
+  border-radius: 12rpx;
+  color: #999;
+}
+
+.done-icon {
+  width: 120rpx;
+  height: 120rpx;
+  line-height: 120rpx;
+  margin: 0 auto 32rpx;
+  border-radius: 50%;
+  background: #1f8a4c;
+  color: #fff;
+  font-size: 64rpx;
+}
+
+.done-title {
+  color: #fff;
+  font-size: 40rpx;
+  font-weight: 600;
+  margin-bottom: 16rpx;
+}
+
+.done-meta {
+  color: #888;
+  font-size: 28rpx;
+  line-height: 1.8;
+}
+
+.done-hint {
+  color: #666;
+  font-size: 26rpx;
+  line-height: 1.8;
+  margin-top: 32rpx;
+}
+
+.head {
+  margin-bottom: 24rpx;
+}
+
+.name {
+  color: #fff;
+  font-size: 36rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.meta {
+  color: #888;
+  font-size: 26rpx;
+}
+
+.num {
+  color: #4cd97b;
+  font-weight: 600;
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+}
+
+.cell {
+  position: relative;
+  width: calc((100% - 16rpx) / 3);
+  height: 220rpx;
+  background: #1a1a1a;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.thumb {
+  width: 100%;
+  height: 100%;
+}
+
+.badge {
+  position: absolute;
+  right: 12rpx;
+  top: 12rpx;
+  width: 44rpx;
+  height: 44rpx;
+  line-height: 40rpx;
+  text-align: center;
+  border-radius: 50%;
+  border: 2rpx solid rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.35);
+  color: transparent;
+  font-size: 30rpx;
+  box-sizing: border-box;
+}
+
+.badge.on {
+  background: #1f8a4c;
+  border-color: #1f8a4c;
+  color: #fff;
+}
+
+.more {
+  text-align: center;
+  color: #666;
+  font-size: 24rpx;
+  padding: 24rpx 0;
+}
+
+.bar-space {
+  height: 140rpx;
+}
+
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 20rpx 32rpx calc(20rpx + env(safe-area-inset-bottom));
+  background: #161616;
+  border-top: 1rpx solid #2a2a2a;
+}
+
+.bar-info {
+  flex: 1;
+  color: #fff;
+  font-size: 30rpx;
+}
+
+.bar-btn {
+  background: #1f8a4c;
+  color: #fff;
+  font-size: 30rpx;
+  padding: 20rpx 60rpx;
+  border-radius: 12rpx;
+}
+
+.bar-btn.disabled {
+  opacity: 0.5;
+}

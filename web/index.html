@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>选片 · 电脑端上传</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1>选片 · 电脑端上传</h1>
+    <p class="sub">把相机里的 JPG 照片批量传进一个选片项目（ARW 请留在本地，精修源只用 RAW）</p>
+
+    <!-- 第 1 步：环境 -->
+    <section id="secEnv">
+      <label for="envId">第 1 步 · 云环境 ID（只需填一次，会记住）</label>
+      <div class="row">
+        <input id="envId" type="text" placeholder="cloud1-xxxxxxxx" autocomplete="off">
+        <button id="btnInit">连接</button>
+      </div>
+      <p id="envStatus" class="hint"></p>
+    </section>
+
+    <!-- 第 2 步：上传码 -->
+    <section id="secCode" class="locked">
+      <label for="codeInput">第 2 步 · 输入小程序里的 6 位上传码（5 分钟有效）</label>
+      <div class="row">
+        <input id="codeInput" class="code-input" type="text" inputmode="numeric"
+               placeholder="●●●●●●" maxlength="6" autocomplete="off">
+        <button id="btnVerify" disabled>验证</button>
+      </div>
+      <p id="projectInfo" class="hint"></p>
+    </section>
+
+    <!-- 第 3 步：选照片 -->
+    <section id="secFiles" class="locked">
+      <label>第 3 步 · 把照片文件夹拖进来，或点击选择文件夹（只识别 JPG）</label>
+
+      <div id="dropZone">
+        <p><strong>拖到这里</strong>，或点击选择文件夹</p>
+        <p class="hint">支持整个 DCIM 文件夹 · 按 Ctrl 可多选 · ARW/其他格式会自动跳过</p>
+      </div>
+      <input id="dirPicker" type="file" webkitdirectory multiple hidden>
+      <input id="filePicker" type="file" accept=".jpg,.jpeg" multiple hidden>
+
+      <div id="fileSummary" class="hint hidden"></div>
+
+      <div class="opts">
+        <label class="inline">预览质量
+          <select id="preset">
+            <option value="standard" selected>标准（长边 2048 · 约 500KB/张）</option>
+            <option value="hd">高清（长边 2880 · 流量较大）</option>
+            <option value="custom">自定义</option>
+          </select>
+        </label>
+        <span id="customOpts" class="hidden">
+          <label class="inline">长边
+            <input id="longEdge" type="number" min="1200" max="4096" step="100" value="2048"> px
+          </label>
+          <label class="inline">质量
+            <input id="quality" type="range" min="40" max="95" step="1" value="82">
+            <span id="qualityVal">82%</span>
+          </label>
+        </span>
+        <label class="inline">水印文字
+          <input id="watermark" type="text" placeholder="留空则不加" maxlength="20">
+        </label>
+      </div>
+
+      <div class="row">
+        <button id="btnStart" disabled>开始上传</button>
+        <button id="btnRetry" class="ghost hidden">重试失败项</button>
+        <button id="btnClear" class="ghost hidden">清空列表</button>
+      </div>
+
+      <div id="stats" class="stats hidden"></div>
+      <div id="progress" class="progress hidden">
+        <div id="progressBar" class="progress-bar"></div>
+      </div>
+    </section>
+
+    <pre id="log" class="log"></pre>
+  </main>
+
+  <script src="https://web-9gikcbug35bad3a8-1304825656.tcloudbaseapp.com/sdk/1.4.0/cloud.js"></script>
+  <script src="upload.js"></script>
+</body>
+</html>

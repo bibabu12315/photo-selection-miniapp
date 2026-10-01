@@ -1,0 +1,50 @@
+<view class="page">
+  <view wx:if="{{phase === 'loading'}}" class="center">加载中…</view>
+
+  <view wx:elif="{{phase === 'error'}}" class="center">
+    <view class="err-icon">⚠</view>
+    <view class="err-text">{{errorMsg}}</view>
+    <view class="retry-btn" bindtap="retryInit">重新加载</view>
+  </view>
+
+  <block wx:elif="{{phase === 'locked'}}">
+    <view class="center locked">
+      <view class="done-icon">✓</view>
+      <view class="done-title">选片已提交</view>
+      <view class="done-meta">{{projectName}}</view>
+      <view class="done-meta">已选 {{selectedCount}} 张照片</view>
+      <view class="done-hint">摄影师将按您的选择进行精修，完成后会通过微信发送给您。</view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="head">
+      <view class="name">{{projectName}}</view>
+      <view class="meta">{{photoCount}} 张 · 已选 <text class="num">{{selectedCount}}</text> 张</view>
+    </view>
+
+    <view class="grid">
+      <view
+        class="cell"
+        wx:for="{{photos}}"
+        wx:key="_id"
+        data-id="{{item._id}}"
+        data-index="{{index}}"
+        bindtap="toggle"
+      >
+        <image class="thumb" src="{{item.thumbUrl}}" mode="aspectFill" lazy-load="{{true}}" />
+        <view class="badge {{item.selected ? 'on' : ''}}">{{item.selected ? '✓' : ''}}</view>
+      </view>
+    </view>
+
+    <view wx:if="{{loadingMore}}" class="more">加载中…</view>
+    <view wx:elif="{{loadError}}" class="more retry-btn" bindtap="retryLoad">加载失败，点此重试</view>
+    <view wx:elif="{{!hasMore && photos.length > 0}}" class="more">已经到底啦 · 共 {{photoCount}} 张</view>
+
+    <view class="bar-space"></view>
+    <view class="bar">
+      <view class="bar-info">已选 {{selectedCount}} 张</view>
+      <view class="bar-btn {{submitting ? 'disabled' : ''}}" bindtap="submit">提交选片</view>
+    </view>
+  </block>
+</view>

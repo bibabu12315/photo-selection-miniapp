@@ -1,0 +1,42 @@
+<view class="container">
+  <view class="field">
+    <text class="label">项目名称</text>
+    <input
+      class="input"
+      value="{{name}}"
+      bindinput="onName"
+      placeholder="例如：小王 2026 夏日写真"
+      maxlength="30"
+    />
+  </view>
+
+  <view class="field">
+    <text class="label">客户名称（选填）</text>
+    <input
+      class="input"
+      value="{{clientName}}"
+      bindinput="onClientName"
+      placeholder="例如：小王"
+      maxlength="30"
+    />
+  </view>
+
+  <view class="field">
+    <text class="label">有效期（天）</text>
+    <input
+      class="input"
+      type="number"
+      value="{{expireDays}}"
+      bindinput="onExpireDays"
+      placeholder="30"
+    />
+  </view>
+
+  <view class="btn {{submitting ? 'disabled' : ''}}" bindtap="submit">
+    {{submitting ? '创建中…' : '创建项目'}}
+  </view>
+
+  <view class="note">
+    创建后生成项目专属访问令牌。照片在电脑端上传页用「上传码」关联到这个项目。
+  </view>
+</view>

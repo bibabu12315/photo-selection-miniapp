@@ -1,0 +1,20 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/project-create/index",
+    "pages/project-detail/index",
+    "pages/client-select/index",
+    "pages/photo-viewer/index",
+    "pages/selection-result/index"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#000000",
+    "navigationBarTitleText": "选片",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#ffffff"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

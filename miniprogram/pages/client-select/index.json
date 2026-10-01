@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "在线选片",
+  "navigationBarBackgroundColor": "#0d0d0d",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#0d0d0d",
+  "onReachBottomDistance": 100
+}

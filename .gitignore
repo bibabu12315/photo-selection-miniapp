@@ -1,0 +1,13 @@
+node_modules/
+cloudfunctions/**/node_modules/
+miniprogram/node_modules/
+
+# 微信开发者工具
+.vscode/
+.idea/
+project.private.config.json
+
+# 构建产物
+dist/
+*.log
+.DS_Store

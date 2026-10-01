@@ -1,0 +1,58 @@
+<view class="container">
+  <view wx:if="{{loading}}" class="hint">加载中…</view>
+
+  <block wx:elif="{{project}}">
+    <view class="head">
+      <view class="name">{{project.name}}</view>
+      <view class="meta">
+        {{project.clientName || '未填客户名'}} · {{project.photoCount}} 张照片 · {{statusText}}
+      </view>
+      <view class="meta">有效期至 {{expireText}}</view>
+    </view>
+
+    <view class="panel">
+      <view class="panel-title">上传码</view>
+      <view wx:if="{{hasCode}}">
+        <view class="code" bindtap="copyCode">{{project.uploadCode}}</view>
+        <view class="code-hint">今天 {{codeExpireText}} 前有效 · 点一下可复制</view>
+      </view>
+      <view wx:else>
+        <view class="code empty">——</view>
+        <view class="code-hint">当前没有有效上传码</view>
+      </view>
+      <view class="btn {{issuing ? 'disabled' : ''}}" bindtap="generateCode">
+        {{hasCode ? '重新生成' : '生成上传码'}}
+      </view>
+      <view class="note">
+        电脑端打开上传页，输入这个 6 位码即可把照片传进本项目。码 5 分钟有效，过期就重新生成，发码不用怕泄露。
+      </view>
+    </view>
+
+    <view class="panel">
+      <view class="panel-title">照片</view>
+      <view class="meta">已登记 {{project.photoCount}} 张（电脑端上传页传图）</view>
+    </view>
+
+    <view class="panel">
+      <view class="panel-title">选片</view>
+      <view class="btn-row">
+        <view class="btn half" bindtap="makeQrCode">{{qrFileID ? '重新生成小程序码' : '生成小程序码'}}</view>
+        <button class="btn half share-btn" open-type="share">分享给模特</button>
+      </view>
+      <view wx:if="{{qrFileID}}" class="qr-wrap">
+        <image class="qr" src="{{qrFileID}}" mode="widthFix" show-menu-by-longpress="{{true}}" />
+        <view class="note">模特扫码进入选片。也可以点「分享给模特」直接发微信卡片（推荐，点对点不怕转发）。</view>
+      </view>
+      <view wx:else class="note">
+        生成小程序码发给模特，或在微信里点「分享给模特」发卡片。模特打开即可浏览和选片，无需注册。
+      </view>
+      <view wx:if="{{project.selectedCount > 0}}" class="btn" bindtap="openResult">
+        查看选片结果（{{project.selectedCount}} 张）
+      </view>
+      <view class="btn ghost" bindtap="copyTestLink">复制选片入口链接</view>
+      <view class="note">
+        小程序未完成认证时，「生成小程序码」和「分享给模特」会被微信禁用。此时复制这个链接，可手动配置到开发者工具的自定义编译参数里做自测。认证通过后此按钮可删。
+      </view>
+    </view>
+  </block>
+</view>

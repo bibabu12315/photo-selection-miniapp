@@ -1,0 +1,9 @@
+{
+  "name": "photo",
+  "version": "1.0.0",
+  "description": "照片登记：校验上传码、登记照片记录（电脑端上传页调用）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

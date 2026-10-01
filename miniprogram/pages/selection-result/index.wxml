@@ -1,0 +1,45 @@
+<view class="container">
+  <view wx:if="{{loading}}" class="hint">加载中…</view>
+
+  <block wx:elif="{{photos.length === 0}}">
+    <view class="hint">还没有选片结果</view>
+    <view class="hint2">模特提交选片后，这里会显示选中的照片和文件名</view>
+    <view class="bottom-space"></view>
+    <view class="bar">
+      <view class="bar-btn ghost {{resetting ? 'disabled' : ''}}" bindtap="reopen">重新开放选片</view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="head">
+      <view class="count">已选 <text class="num">{{selectedCount}}</text> 张</view>
+      <view class="head-btns">
+        <view class="mini-btn" bindtap="switchView">{{view === 'list' ? '网格' : '列表'}}</view>
+        <view class="mini-btn" bindtap="copyAll">复制全部文件名</view>
+      </view>
+    </view>
+
+    <view wx:if="{{view === 'list'}}" class="list">
+      <view class="row" wx:for="{{photos}}" wx:key="_id">
+        <image class="row-thumb" src="{{item.thumbUrl}}" mode="aspectFill" lazy-load="{{true}}" />
+        <view class="row-name">{{item.filename}}</view>
+        <view class="row-idx">{{index + 1}}</view>
+      </view>
+    </view>
+
+    <view wx:else class="grid">
+      <view class="cell" wx:for="{{photos}}" wx:key="_id">
+        <image class="cell-img" src="{{item.thumbUrl}}" mode="aspectFill" lazy-load="{{true}}" />
+      </view>
+    </view>
+
+    <view class="note">
+      文件名与 Lightroom 中一致（按文件名升序排列）。精修时在 LR 中按文件名对照打旗标即可。
+    </view>
+
+    <view class="bottom-space"></view>
+    <view class="bar">
+      <view class="bar-btn ghost {{resetting ? 'disabled' : ''}}" bindtap="reopen">重新开放选片</view>
+    </view>
+  </block>
+</view>
