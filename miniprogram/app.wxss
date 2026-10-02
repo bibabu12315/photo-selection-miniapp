@@ -134,6 +134,12 @@ page {
   color: #ffffff;
 }
 
+/* 已归档：中性灰，不抢已过期/已提交的注意力 */
+.chip.grey {
+  background: #ececec;
+  color: #8a8a8a;
+}
+
 /* ---------- 表单 ---------- */
 
 .field {

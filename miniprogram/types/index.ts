@@ -6,9 +6,11 @@ export type ProjectStatus =
   | 'SELECTION_SUBMITTED'
   | 'COMPLETED'
   | 'EXPIRED'
+  /** 已归档：大图已清理，只留缩略图和选片记录 */
+  | 'ARCHIVED'
 
 /** 预览规格档位 */
-export type PreviewPreset = 'standard' | 'high' | 'custom'
+export type PreviewPreset = 'standard' | 'hd' | 'hdpro' | 'raw' | 'custom'
 
 export interface PreviewSpec {
   preset: PreviewPreset
@@ -38,6 +40,10 @@ export interface Project {
   expireAt: number
   /** 套餐张数上限，0 = 不限 */
   packageCount: number
+  /** 在线额度计量：当前占用字节数（preview + thumb），归档后只剩 thumb */
+  usedBytes?: number
+  /** 归档时间，0 = 未归档 */
+  archivedAt?: number
   uploadCode: string
   uploadCodeExpireAt: number
   uploadToken: string

@@ -8,14 +8,18 @@ const crypto = require('crypto')
 /** 每个项目最多邀请的模特数 */
 const MAX_MODELS = 5
 
+/** 过期后多久自动归档（宽限期，避免刚到期就删图） */
+const ARCHIVE_GRACE_DAYS = 7
+
 /**
  * 项目管理云函数（仅摄影师可调用，V2.0）
  *
  * action = create            创建项目 { name, shootDate?, note?, expireDays?, packageCount? }
  * action = list              项目列表（按创建时间倒序）
  * action = get               项目详情 { _id }
- * action = remove            删除项目（连带清理邀请/选片/照片记录）{ _id }
- * action = extend            项目延期 30 天 { _id }
+ * action = remove            删除项目（连带清理云存储文件 + 邀请/选片/照片记录）{ _id }
+ * action = extend            项目延期 30 天；已归档的项目续期后回到可上传状态 { _id }
+ * action = archive           归档项目：删 preview 保留 thumb，状态置 ARCHIVED { _id }
  * action = issueUploadCode   签发 6 位上传码，5 分钟有效 { _id }
  *
  * 模特邀请（每项目最多 5 位）：
@@ -48,6 +52,8 @@ exports.main = async (event = {}) => {
         return await removeProject(event._id, OPENID)
       case 'extend':
         return await extendProject(event._id, OPENID)
+      case 'archive':
+        return await archiveProject(event._id, OPENID, true)
       case 'issueUploadCode':
         return await issueUploadCode(event._id, OPENID)
       case 'createInvite':
@@ -91,9 +97,11 @@ async function createProject(event, openid) {
     note: String(event.note || '').trim().slice(0, 200),
     shootDate: shootAt || now,
     status: 'DRAFT',
-    previewSpec: { preset: 'standard', longEdge: 2048, quality: 82, watermarkText: '' },
+    // 默认档 standard = 1600 / 75：单条最大的成本杠杆，见 docs/云成本优化-四项技术任务.md
+    previewSpec: { preset: 'standard', longEdge: 1600, quality: 75, watermarkText: '' },
     expireAt: now + expireDays * 86400000,
     packageCount,
+    usedBytes: 0,
     uploadCode: '',
     uploadCodeExpireAt: 0,
     uploadToken: '',
@@ -110,7 +118,10 @@ async function createProject(event, openid) {
   return { ok: true, data: { _id: add._id } }
 }
 
-/** 只返回自己的项目 */
+/**
+ * 只返回自己的项目
+ * 顺带惰性归档：过期超过宽限期的项目，在这里触发归档（无需定时触发器）
+ */
 async function listProjects(openid) {
   const res = await db
     .collection('project')
@@ -118,7 +129,64 @@ async function listProjects(openid) {
     .orderBy('createdAt', 'desc')
     .limit(100)
     .get()
-  return { ok: true, data: { projects: res.data || [] } }
+  const projects = res.data || []
+
+  const deadline = Date.now() - ARCHIVE_GRACE_DAYS * 86400000
+  for (const p of projects) {
+    if (p.status !== 'ARCHIVED' && p.expireAt && p.expireAt < deadline) {
+      try {
+        await archiveProject(p._id, openid, false)
+      } catch (e) {
+        // 归档失败不影响列表返回
+      }
+    }
+  }
+  return { ok: true, data: { projects } }
+}
+
+/**
+ * 归档：删掉所有 preview，只留 thumbnail（单张占用 0.59MB → 0.025MB，省 96%）
+ * 保留项目名 / 模特 / 已选文件名列表，摄影师仍能回顾这一单
+ * @param manual 摄影师手动归档（true）还是列表时自动触发（false）
+ */
+async function archiveProject(id, openid, manual) {
+  const own = await ownedProject(id, openid)
+  if (!own.ok) return { ok: false, error: own.error }
+  if (own.project.status === 'ARCHIVED') {
+    return { ok: false, error: '这个项目已经归档了' }
+  }
+
+  const previewIDs = []
+  let thumbBytes = 0
+  for (let page = 0; page < 20; page++) {
+    const res = await db
+      .collection('photo')
+      .where({ projectId: id })
+      .field({ previewFileID: 1, thumbBytes: 1 })
+      .skip(page * 1000)
+      .limit(1000)
+      .get()
+    const list = res.data || []
+    for (const p of list) {
+      if (p.previewFileID) previewIDs.push(p.previewFileID)
+      thumbBytes += parseInt(p.thumbBytes, 10) || 0
+    }
+    if (list.length < 1000) break
+  }
+
+  const del = await deleteFiles(previewIDs)
+  const now = Date.now()
+  await db.collection('project').doc(id).update({
+    data: {
+      status: 'ARCHIVED',
+      archivedAt: now,
+      archivedBy: manual ? 'manual' : 'auto',
+      usedBytes: thumbBytes,
+      updatedAt: now,
+    },
+  })
+
+  return { ok: true, data: { archived: true, deletedFiles: del.deleted, usedBytes: thumbBytes } }
 }
 
 async function getProject(id, openid) {
@@ -133,14 +201,17 @@ async function getProject(id, openid) {
     token: i.token,
   }))
 
-  return { ok: true, data: { project: res.data, invites } }
+  return { ok: true, data: { project: p, invites } }
 }
 
 async function removeProject(id, openid) {
   const own = await ownedProject(id, openid)
   if (!own.ok) return { ok: false, error: own.error }
 
-  // 连带清理：邀请 / 选片记录 / 照片记录（云存储文件在控制台手动清理）
+  // 1) 先清云存储：preview / thumbnail / 项目二维码。失败不阻断后面的数据库清理
+  const del = await deleteProjectFiles(id)
+
+  // 2) 连带清理：邀请 / 选片记录 / 照片记录
   try {
     const invRes = await db.collection('invite').where({ projectId: id }).limit(50).get()
     for (const inv of invRes.data || []) {
@@ -167,7 +238,65 @@ async function removeProject(id, openid) {
   }
 
   await db.collection('project').doc(id).remove()
-  return { ok: true, data: { removed: true } }
+  return { ok: true, data: { removed: true, deletedFiles: del.deleted } }
+}
+
+/**
+ * 删除项目在云存储上的全部文件：preview / thumb / 小程序码
+ * photo 单次最多取 1000 条，超过翻页；deleteFile 单次最多 50 个
+ */
+async function deleteProjectFiles(id) {
+  const fileIDs = []
+  try {
+    for (let page = 0; page < 20; page++) {
+      const res = await db
+        .collection('photo')
+        .where({ projectId: id })
+        .field({ previewFileID: 1, thumbFileID: 1 })
+        .skip(page * 1000)
+        .limit(1000)
+        .get()
+      const list = res.data || []
+      for (const p of list) {
+        if (p.previewFileID) fileIDs.push(p.previewFileID)
+        if (p.thumbFileID) fileIDs.push(p.thumbFileID)
+      }
+      if (list.length < 1000) break
+    }
+  } catch (e) {
+    /* 集合不存在时忽略 */
+  }
+
+  // 模特小程序码：p/<projectId>/qrcode-<modelId>.png，按邀请记录拼路径
+  try {
+    const invRes = await db.collection('invite').where({ projectId: id }).limit(50).get()
+    const env = (cloud.getWXContext() || {}).ENV || cloud.DYNAMIC_CURRENT_ENV
+    for (const inv of invRes.data || []) {
+      fileIDs.push(`cloud://${env}.${bucket()}/p/${id}/qrcode-${inv.modelId}.png`)
+    }
+  } catch (e) {
+    /* 忽略 */
+  }
+
+  return await deleteFiles(fileIDs)
+}
+
+/** 分批删除云文件（deleteFile 单次上限 50），失败记日志不抛错 */
+async function deleteFiles(fileIDs) {
+  const list = Array.from(new Set((fileIDs || []).filter(Boolean)))
+  let deleted = 0
+  const failed = []
+  for (let i = 0; i < list.length; i += 50) {
+    const chunk = list.slice(i, i + 50)
+    try {
+      await cloud.deleteFile({ fileList: chunk })
+      deleted += chunk.length
+    } catch (e) {
+      failed.push(...chunk)
+      console.error('deleteFile 失败', e && e.message)
+    }
+  }
+  return { deleted, failed: failed.length }
 }
 
 async function extendProject(id, openid) {
@@ -177,10 +306,15 @@ async function extendProject(id, openid) {
 
   const base = p.expireAt && p.expireAt > Date.now() ? p.expireAt : Date.now()
   const expireAt = base + 30 * 86400000
+
+  // 归档项目续期：缩略图和已选文件名还在，但 preview 已删，需重新上传才能再选片
+  const restored = p.status === 'ARCHIVED'
+  const status = restored ? 'UPLOADING' : p.status === 'EXPIRED' ? 'SELECTING' : p.status
+
   await db.collection('project').doc(id).update({
-    data: { expireAt, status: p.status === 'EXPIRED' ? 'SELECTING' : p.status, updatedAt: Date.now() },
+    data: { expireAt, status, archivedAt: restored ? 0 : p.archivedAt || 0, updatedAt: Date.now() },
   })
-  return { ok: true, data: { expireAt } }
+  return { ok: true, data: { expireAt, restored, needReupload: restored } }
 }
 
 async function issueUploadCode(id, openid) {

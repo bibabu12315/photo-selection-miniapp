@@ -53,20 +53,22 @@
         <label class="opt">
           <span>预览规格</span>
           <select id="preset">
-            <option value="standard" selected>标准 2048</option>
-            <option value="hd">高清 2880</option>
+            <option value="standard" selected>标准（推荐 · 省流量）</option>
+            <option value="hd">高清</option>
+            <option value="hdpro">高清 Pro</option>
+            <option value="raw">原画质（占用大）</option>
             <option value="custom">自定义</option>
           </select>
         </label>
         <span id="customOpts" class="hidden">
           <label class="opt">
             <span>长边</span>
-            <input id="longEdge" type="number" min="1200" max="4096" step="100" value="2048">
+            <input id="longEdge" type="number" min="1200" max="4096" step="100" value="1600">
           </label>
           <label class="opt">
             <span>质量</span>
-            <input id="quality" type="range" min="40" max="95" step="1" value="82">
-            <span id="qualityVal">82%</span>
+            <input id="quality" type="range" min="40" max="95" step="1" value="75">
+            <span id="qualityVal">75%</span>
           </label>
         </span>
         <label class="opt">

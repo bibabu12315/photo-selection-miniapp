@@ -4,7 +4,9 @@ import {
   saveSelection,
   submitSelection,
   ClientPhoto,
+  PhotoItem,
 } from '../../services/selection'
+import { getCached, putBatch, cachedIds } from '../../services/urlcache'
 
 /**
  * 模特端 · 选片
@@ -33,6 +35,8 @@ Page({
     hasMore: false,
     loadingMore: false,
     loadError: false,
+    /** 项目已归档：缩略图还在，大图已清理 */
+    archived: false,
   },
 
   projectId: '',
@@ -104,15 +108,36 @@ Page({
     if (this.data.loadingMore) return
     this.setData({ loadingMore: true, loadError: false })
     const skip = this.data.photos.length
-    const res = await getPhotos(this.projectId, this.modelId, skip, PAGE_SIZE)
+
+    // 端上已有有效缓存的，告诉服务端别再生成链接
+    const have = cachedIds(this.projectId, 'thumb')
+    const res = await getPhotos(this.projectId, this.modelId, skip, PAGE_SIZE, have)
     if (!res.ok || !res.data) {
       this.setData({ loadingMore: false, loadError: true })
       return
     }
-    const incoming = res.data.photos.map((p) => ({
+
+    const photos: PhotoItem[] = res.data.photos
+    const incoming = photos.map((p) => ({
       ...p,
+      thumbUrl: p.thumbUrl || getCached(this.projectId, 'thumb', p._id),
       selected: presetSelected ? presetSelected.has(p._id) : false,
     }))
+    putBatch(
+      this.projectId,
+      'thumb',
+      photos.filter((p) => !p.cached && p.thumbUrl).map((p) => ({ photoId: p._id, url: p.thumbUrl }))
+    )
+
+    if (res.data.archived && !this.data.archived) {
+      this.setData({ archived: true })
+      ;(wx as any).showToast({
+        title: '项目已归档，大图已清理；缩略图和已选记录仍可查看',
+        icon: 'none',
+        duration: 3000,
+      })
+    }
+
     this.setData({
       loadingMore: false,
       loadError: false,

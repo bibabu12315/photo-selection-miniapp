@@ -17,6 +17,28 @@
   margin-top: 8rpx;
 }
 
+.tag-archived {
+  display: inline-block;
+  margin-left: 12rpx;
+  font-size: 22rpx;
+  font-weight: 400;
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  background: #ececec;
+  color: #8a8a8a;
+  vertical-align: middle;
+}
+
+.archived-tip {
+  margin-top: 24rpx;
+  padding: 20rpx 24rpx;
+  border-radius: 16rpx;
+  background: #f6f6f6;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: var(--fg2);
+}
+
 .card-title {
   font-size: 28rpx;
   font-weight: 600;

@@ -206,7 +206,8 @@ async function myList(openid) {
 }
 
 /** 分页拉取照片 + 缩略图临时链接 */
-async function getPhotos({ projectId, modelId, skip = 0, limit = 18 }, openid) {
+/** have：端上已有有效缓存的 photoId，服务端跳过这些，不再重复取临时链接 */
+async function getPhotos({ projectId, modelId, skip = 0, limit = 18, have }, openid) {
   const { project, selection } = await guardModel(projectId, modelId, openid)
 
   const s = Math.max(0, parseInt(skip, 10) || 0)
@@ -221,7 +222,11 @@ async function getPhotos({ projectId, modelId, skip = 0, limit = 18 }, openid) {
     .get()
 
   const photos = res.data || []
-  const urlMap = await tempUrls(photos.map((p) => p.thumbFileID))
+  const haveSet = new Set(
+    (Array.isArray(have) ? have : []).filter((x) => typeof x === 'string').slice(0, 3000)
+  )
+  const need = photos.filter((p) => !haveSet.has(p._id))
+  const urlMap = await tempUrls(need.map((p) => p.thumbFileID))
 
   return {
     ok: true,
@@ -232,17 +237,27 @@ async function getPhotos({ projectId, modelId, skip = 0, limit = 18 }, openid) {
         width: p.width || 0,
         height: p.height || 0,
         thumbUrl: urlMap[p.thumbFileID] || '',
+        /** true = 端上已有缓存，服务端没生成链接，由端上从缓存补 */
+        cached: haveSet.has(p._id),
       })),
       hasMore: photos.length === l,
       locked: !!(selection && selection.locked),
       packageCount: project.packageCount || 0,
+      archived: project.status === 'ARCHIVED',
     },
   }
 }
 
-/** 单张大图临时链接 */
-async function getPreview({ projectId, modelId, photoId }, openid) {
+/**
+ * 大图临时链接
+ * range > 0 时一次返回当前张 + 前后各 range 张（默认 0，模特端传 2）
+ * 一次调用顶 5 次：连续滑 20 张只产生约 4~5 次调用，而不是 20 次
+ */
+async function getPreview({ projectId, modelId, photoId, range }, openid) {
   const { project } = await guardModel(projectId, modelId, openid)
+  if (project.status === 'ARCHIVED') {
+    return { ok: false, error: '项目已归档，大图已清理；如需重新选片请联系摄影师续期' }
+  }
 
   const res = await db.collection('photo').doc(String(photoId || '')).get()
   const photo = res.data
@@ -250,13 +265,43 @@ async function getPreview({ projectId, modelId, photoId }, openid) {
     return { ok: false, error: '照片不存在' }
   }
 
-  const urlMap = await tempUrls([photo.previewFileID])
+  const r = Math.min(5, Math.max(0, parseInt(range, 10) || 0))
+  let list = [photo]
+
+  if (r > 0) {
+    const so = photo.sortOrder || 0
+    const proj = { previewFileID: 1, sortOrder: 1, filename: 1 }
+    const [nextRes, prevRes] = await Promise.all([
+      db
+        .collection('photo')
+        .where({ projectId: project._id, sortOrder: _.gt(so) })
+        .orderBy('sortOrder', 'asc')
+        .limit(r)
+        .field(proj)
+        .get(),
+      db
+        .collection('photo')
+        .where({ projectId: project._id, sortOrder: _.lt(so) })
+        .orderBy('sortOrder', 'desc')
+        .limit(r)
+        .field(proj)
+        .get(),
+    ])
+    list = (prevRes.data || []).slice().reverse().concat([photo], nextRes.data || [])
+  }
+
+  const urlMap = await tempUrls(list.map((p) => p.previewFileID))
   return {
     ok: true,
     data: {
       photoId: photo._id,
       filename: photo.filename,
       previewUrl: urlMap[photo.previewFileID] || '',
+      list: list.map((p) => ({
+        photoId: p._id,
+        filename: p.filename,
+        previewUrl: urlMap[p.previewFileID] || '',
+      })),
     },
   }
 }
@@ -498,10 +543,16 @@ async function updateModelSummary(projectId, modelId, patch) {
   return models
 }
 
+/** 临时链接有效期：24 小时（配合端上缓存，同一项目重复打开不再重复取链接） */
+const TEMP_URL_MAX_AGE = 24 * 3600 * 1000
+
 /** 批量取临时链接（getTempFileURL 单次最多 50 个） */
 async function tempUrls(fileIDs) {
   const out = {}
-  const list = Array.from(new Set((fileIDs || []).filter(Boolean)))
+  const list = Array.from(new Set((fileIDs || []).filter(Boolean))).map((fileID) => ({
+    fileID,
+    maxAge: TEMP_URL_MAX_AGE,
+  }))
   for (let i = 0; i < list.length; i += 50) {
     const chunk = list.slice(i, i + 50)
     try {

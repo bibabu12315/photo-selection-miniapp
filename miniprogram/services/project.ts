@@ -33,12 +33,23 @@ export async function getProject(_id: string) {
 }
 
 export async function removeProject(_id: string) {
-  return callSafe<{ removed: boolean }>('project', { action: 'remove', _id })
+  return callSafe<{ removed: boolean; deletedFiles: number }>('project', { action: 'remove', _id })
 }
 
-/** 延期 30 天 */
+/** 延期 30 天；已归档的项目续期后回到可上传状态（大图已删，需重新上传） */
 export async function extendProject(_id: string) {
-  return callSafe<{ expireAt: number }>('project', { action: 'extend', _id })
+  return callSafe<{ expireAt: number; restored: boolean; needReupload: boolean }>('project', {
+    action: 'extend',
+    _id,
+  })
+}
+
+/** 归档：删掉大图只留缩略图，占用降到原来的 4% */
+export async function archiveProject(_id: string) {
+  return callSafe<{ archived: boolean; deletedFiles: number; usedBytes: number }>('project', {
+    action: 'archive',
+    _id,
+  })
 }
 
 /** 签发 6 位上传码，5 分钟有效 */

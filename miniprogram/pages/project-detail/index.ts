@@ -2,6 +2,7 @@ import {
   getProject,
   issueUploadCode,
   extendProject,
+  archiveProject,
   removeProject,
   createInvite,
   removeInvite,
@@ -11,6 +12,7 @@ import {
 import { shootText, expireText, packageText, formatTime } from '../../utils/format'
 import { UPLOAD_PAGE_URL } from '../../env'
 import { Project } from '../../types'
+import { clearProject } from '../../services/urlcache'
 
 /**
  * 摄影师端 · 项目工作台
@@ -63,6 +65,10 @@ Page({
 
     /** 结果 */
     submittedCount: 0,
+
+    /** 归档与占用 */
+    isArchived: false,
+    usedText: '',
   },
 
   onLoad(this: any, query: Record<string, string>) {
@@ -120,6 +126,8 @@ Page({
       hasCode,
       code: hasCode ? p.uploadCode : '——',
       codeExpireText: hasCode ? formatTime(p.uploadCodeExpireAt) : '',
+      isArchived: p.status === 'ARCHIVED',
+      usedText: bytesText(p.usedBytes),
     })
   },
 
@@ -287,10 +295,33 @@ Page({
 
   /* ---------- 其他 ---------- */
 
+  /** 归档：删掉大图只留缩略图，占用降到原来的 4% */
+  tapArchiveProject(this: any) {
+    ;(wx as any).showModal({
+      title: '归档这个项目？',
+      content:
+        '会删掉云端的大图（缩略图保留），占用降到原来的 4%。项目名、模特和已选的文件名都还在，随时可回顾；如需重新选片，续期后再传一次照片。',
+      confirmText: '归档',
+      success: async (r: any) => {
+        if (!r.confirm) return
+        const res = await archiveProject(this.data.id)
+        if (!res.ok) {
+          ;(wx as any).showModal({ title: '归档失败', content: res.error || '', showCancel: false })
+          return
+        }
+        ;(wx as any).showToast({ title: '已归档，占用已释放', icon: 'success' })
+        await this.load()
+      },
+    })
+  },
+
   extend(this: any) {
+    const archived = this.data.isArchived
     ;(wx as any).showModal({
       title: '延期 30 天？',
-      content: '项目已过期或快到期时，给模特多留一点选片时间。',
+      content: archived
+        ? '这个项目已归档，延期后回到可上传状态。大图之前已清理，需要重新上传照片才能再选片。'
+        : '项目已过期或快到期时，给模特多留一点选片时间。',
       confirmText: '延期',
       success: async (r: any) => {
         if (!r.confirm) return
@@ -299,7 +330,10 @@ Page({
           ;(wx as any).showModal({ title: '操作失败', content: res.error || '', showCancel: false })
           return
         }
-        ;(wx as any).showToast({ title: '已延期 30 天', icon: 'success' })
+        ;(wx as any).showToast({
+          title: archived ? '已延期，请重新上传照片' : '已延期 30 天',
+          icon: 'success',
+        })
         await this.load()
       },
     })
@@ -308,7 +342,7 @@ Page({
   tapRemoveProject(this: any) {
     ;(wx as any).showModal({
       title: '删除项目？',
-      content: '会同时删除该项目的邀请、选片和照片记录，云存储里的图片需到控制台手动清理。',
+      content: '会同时删除该项目的邀请、选片、照片记录，以及云存储上的图片（不可恢复）。',
       confirmText: '删除',
       success: async (r: any) => {
         if (!r.confirm) return
@@ -317,6 +351,7 @@ Page({
           ;(wx as any).showModal({ title: '删除失败', content: res.error || '', showCancel: false })
           return
         }
+        clearProject(this.data.id)
         ;(wx as any).navigateBack()
       },
     })
@@ -333,6 +368,14 @@ Page({
     }
   },
 })
+
+/** 字节数 → 人话 */
+function bytesText(n: number): string {
+  const v = Number(n) || 0
+  if (v <= 0) return ''
+  if (v < 1024 * 1024) return Math.round(v / 1024) + ' KB'
+  return (v / 1024 / 1024).toFixed(1) + ' MB'
+}
 
 function inviteIdOf(invites: InviteItem[], modelId: string): string {
   const hit = invites.find((i) => i.modelId === modelId)

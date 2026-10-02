@@ -3,9 +3,13 @@
 
   <block wx:elif="{{project}}">
     <view class="head">
-      <view class="name">{{project.name}}</view>
+      <view class="name">
+        {{project.name}}
+        <text wx:if="{{isArchived}}" class="tag-archived">已归档</text>
+      </view>
       <view class="meta">{{shoot}} · 有效期至 {{expire}} · 套餐 {{pkg}}</view>
       <view wx:if="{{note}}" class="note">备注：{{note}}</view>
+      <view wx:if="{{usedText}}" class="note">云存储占用 {{usedText}}</view>
     </view>
 
     <!-- ① 照片 -->
@@ -76,8 +80,13 @@
       </view>
     </view>
 
+    <view wx:if="{{isArchived}}" class="archived-tip">
+      已归档：大图已清理，缩略图和模特已选的文件名都还在（占用降到原来的 4%）。续期后可重新上传照片再选。
+    </view>
+
     <view class="links">
       <view class="link" bindtap="extend">延期 30 天</view>
+      <view wx:if="{{!isArchived}}" class="link" bindtap="tapArchiveProject">归档（省空间）</view>
       <view class="link danger" bindtap="tapRemoveProject">删除项目</view>
     </view>
   </block>

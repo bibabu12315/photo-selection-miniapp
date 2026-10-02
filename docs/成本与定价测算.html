@@ -3,321 +3,497 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>选片小程序 · 定价与成本测算器 v2</title>
+<title>选片小程序 · 三档定价与云成本测算器 v3</title>
 <style>
   :root{
-    --bg:#f7f7f5; --card:#ffffff; --line:rgba(0,0,0,.10); --line2:rgba(0,0,0,.18);
-    --tx:#1f1f1d; --tx2:#6b6a65; --tx3:#94938d;
-    --blue:#185FA5; --blue-bg:#E6F1FB; --red:#A32D2D; --red-bg:#FCEBEB;
-    --green:#3B6D11; --green-bg:#EAF3DE; --amber:#854F0B; --amber-bg:#FAEEDA;
+    --bg:#F5F6F8; --card:#FFFFFF; --line:#E3E6EB; --text:#1F2329; --sub:#646A73;
+    --blue:#185FA5; --blue-bg:#EAF2FB; --green:#2E7D32; --green-bg:#E8F3E9;
+    --red:#C0392B; --red-bg:#FCECEA; --amber:#B26A00; --amber-bg:#FDF3E3;
   }
   *{box-sizing:border-box;}
-  body{margin:0;background:var(--bg);color:var(--tx);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
-    font-size:14px;line-height:1.6;}
-  .wrap{max-width:1100px;margin:0 auto;padding:32px 24px 64px;}
-  h1{font-size:20px;font-weight:500;margin:0 0 4px;}
-  h2{font-size:14px;font-weight:500;margin:0 0 12px;}
-  .sub{font-size:13px;color:var(--tx2);margin:0 0 20px;}
-  .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:20px;align-items:start;}
-  @media(max-width:860px){.grid{grid-template-columns:1fr;}}
-  .card{background:var(--card);border:0.5px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:16px;}
-  .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:6px 0;}
-  .row label{font-size:13px;color:var(--tx2);}
-  .row .val{font-variant-numeric:tabular-nums;font-size:13px;font-weight:500;}
-  input[type=number]{width:88px;padding:5px 8px;border:0.5px solid var(--line2);border-radius:6px;
-    background:var(--card);color:var(--tx);font-size:13px;font-family:inherit;text-align:right;}
-  input[type=range]{width:100%;accent-color:var(--blue);}
-  .field{margin-bottom:14px;}
-  .field .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;}
-  .field .name{font-size:13px;color:var(--tx2);}
-  .field .num{font-size:13px;font-weight:500;font-variant-numeric:tabular-nums;}
-  .hint{font-size:11px;color:var(--tx3);margin-top:2px;line-height:1.6;}
-  .presets{display:flex;gap:8px;flex-wrap:wrap;}
-  button{padding:7px 12px;border:0.5px solid var(--line2);background:var(--card);color:var(--tx);
-    border-radius:8px;font-size:12.5px;font-family:inherit;cursor:pointer;}
-  button:hover{border-color:var(--blue);color:var(--blue);}
-  .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;}
-  .kpi>div{background:var(--card);border:0.5px solid var(--line);border-radius:10px;padding:12px 14px;}
-  .kpi .lb{font-size:12px;color:var(--tx2);}
-  .kpi .vv{font-size:22px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px;}
-  .bad{color:var(--red);} .good{color:var(--green);} .warn{color:var(--amber);}
-  .verdict{padding:12px 14px;border-radius:10px;font-size:13px;line-height:1.65;margin-bottom:16px;}
-  .verdict.bad{background:var(--red-bg);color:var(--red);}
-  .verdict.good{background:var(--green-bg);color:var(--green);}
-  .verdict.warn{background:var(--amber-bg);color:var(--amber);}
-  .bar{margin-bottom:11px;}
-  .bar .top{display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);margin-bottom:3px;}
-  .track{height:7px;background:rgba(0,0,0,.07);border-radius:4px;overflow:hidden;}
-  .fill{height:100%;border-radius:4px;transition:width .18s linear;}
-  table{width:100%;border-collapse:collapse;font-size:13px;}
-  th,td{text-align:left;padding:7px 6px;border-bottom:0.5px solid var(--line);}
-  th{color:var(--tx2);font-weight:400;font-size:12px;}
-  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;}
-  .note{font-size:12px;color:var(--tx2);line-height:1.75;}
-  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;background:rgba(0,0,0,.05);padding:1px 4px;border-radius:4px;}
-  .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:5px;background:var(--blue-bg);color:var(--blue);margin-left:6px;}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    font-size:13px;line-height:1.6;}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 16px 48px;}
+  h1{font-size:19px;margin:0 0 4px;}
+  .sub{color:var(--sub);font-size:12px;margin-bottom:16px;}
+  h2{font-size:14px;margin:0 0 10px;padding-left:8px;border-left:3px solid var(--blue);}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;}
+  @media (max-width:900px){.grid{grid-template-columns:1fr;}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0;}
+  .row label{color:var(--sub);flex:1;font-size:12px;}
+  .row input[type=number],.row input[type=text],.row select{
+    width:96px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;
+    font-size:12px;text-align:right;background:#fff;color:var(--text);}
+  .row select{width:132px;text-align:left;}
+  .row .unit{color:var(--sub);font-size:11px;width:44px;text-align:left;}
+  .hint{color:var(--sub);font-size:11px;line-height:1.5;margin:6px 0 0;}
+  .switch{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-top:1px dashed var(--line);}
+  .switch input{margin:3px 0 0;}
+  .switch .t{font-size:12px;}
+  .switch .d{color:var(--sub);font-size:11px;}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;}
+  @media (max-width:900px){.kpis{grid-template-columns:repeat(2,1fr);}}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;}
+  .kpi .k{color:var(--sub);font-size:11px;}
+  .kpi .v{font-size:19px;font-weight:600;margin-top:2px;}
+  .kpi .n{font-size:11px;color:var(--sub);}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th,td{padding:6px 6px;border-bottom:1px solid var(--line);text-align:right;}
+  th{color:var(--sub);font-weight:500;font-size:11px;text-align:right;}
+  th:first-child,td:first-child{text-align:left;}
+  td.n{font-variant-numeric:tabular-nums;}
+  .good{color:var(--green);} .bad{color:var(--red);} .warn{color:var(--amber);}
+  .bar{height:8px;background:#EDEFF2;border-radius:4px;overflow:hidden;margin:5px 0 2px;}
+  .bar > i{display:block;height:100%;width:0;border-radius:4px;transition:width .2s;}
+  .barlab{display:flex;justify-content:space-between;font-size:11px;color:var(--sub);}
+  .verdict{border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.6;}
+  .verdict.good{background:var(--green-bg);color:#1E5B22;}
+  .verdict.bad{background:var(--red-bg);color:#8C2B20;}
+  .verdict.warn{background:var(--amber-bg);color:#7A4A00;}
+  .presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .presets button{padding:6px 12px;border:1px solid var(--line);background:#fff;border-radius:16px;
+    font-size:12px;cursor:pointer;color:var(--text);}
+  .presets button:hover{border-color:var(--blue);color:var(--blue);}
+  .front{font-size:12px;}
+  .front .l{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;background:#FAFBFC;}
+  .front b{color:var(--blue);}
+  code{background:#F0F2F5;padding:1px 4px;border-radius:3px;font-size:11px;}
+  .tagD{display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;background:var(--blue-bg);color:var(--blue);}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>摄影选片小程序 · 定价与成本测算器 <span class="tag">v2 按真实接单频率</span></h1>
-  <p class="sub">模型已修正为「套餐费 + 超出部分按量计费」，而不是把套餐费摊到极限吞吐上——大多数月份配额用不满，边际成本接近 0。</p>
 
-  <div class="card">
-    <h2>场景预设</h2>
-    <div class="presets">
-      <button id="q1">起步：20 免费 / 10 付费，原始规格 preview 0.55</button>
-      <button id="q2">推荐：20 免费 / 10 付费，preview 降到 0.25</button>
-      <button id="q3">规模：50 免费 / 30 付费，preview 0.25</button>
-      <button id="q4">失控：80 免费 / 40 付费，项目不清理</button>
-    </div>
+  <h1>选片小程序 · 三档定价与云成本测算器 <span class="tagD">v3</span></h1>
+  <div class="sub">模型：套餐月费 + 超额按量计费。成本只由「在线存储 + 调用次数 + CDN 流量」决定，与项目数无关。所有参数可改，右侧实时重算。</div>
+
+  <div class="presets">
+    <button id="pA">期望用量（默认）</button>
+    <button id="pB">全部用满额度</button>
+    <button id="pC">当前代码（四项优化全关）</button>
+    <button id="pD">起步期（用户数减半）</button>
   </div>
 
   <div class="grid">
+
+    <!-- ========== 左：参数 ========== -->
     <div>
+
       <div class="card">
-        <h2>① 固定成本</h2>
-        <div class="row"><label>云开发套餐 元/月</label><input type="number" id="plan" value="19.9" step="0.1" min="0"></div>
-        <div class="row"><label>小程序认证 元/年</label><input type="number" id="cert" value="30" step="1" min="0"></div>
-        <div class="row"><label>个体工商户 元/年（0=不办）</label><input type="number" id="biz" value="300" step="50" min="0"></div>
-        <div class="row"><label>支付手续费 %</label><input type="number" id="fee" value="0.6" step="0.1" min="0"></div>
-        <div class="row"><label>月固定成本合计</label><span class="val" id="fixed">—</span></div>
+        <h2>固定成本</h2>
+        <div class="row"><label>云开发套餐月费</label><input id="planFee" type="number" value="19.9" step="0.1"><span class="unit">元/月</span></div>
+        <div class="row"><label>小程序认证年费</label><input id="certYear" type="number" value="30" step="1"><span class="unit">元/年</span></div>
+        <div class="row"><label>其他固定支出</label><input id="otherFix" type="number" value="0" step="1"><span class="unit">元/月</span></div>
+        <label class="switch"><input id="bizOn" type="checkbox"><div><div class="t">已办个体户（可合法收款）</div><div class="d">年费 <input id="bizYear" type="number" value="300" step="50" style="width:70px"> 元/年，摊到每月 25 元</div></div></label>
       </div>
 
       <div class="card">
-        <h2>② 单张照片规格</h2>
-        <div class="field">
-          <div class="top"><span class="name">preview 体积</span><span class="num"><span id="pvNum">0.25</span> MB</span></div>
-          <input type="range" id="pv" min="0.12" max="1.50" step="0.01" value="0.25">
-          <div class="hint">0.55 = 现在（长边 2048 / q82）；0.25 = 建议（长边 1600 / q75），手机上看几乎无差别。</div>
-        </div>
-        <div class="field">
-          <div class="top"><span class="name">thumbnail 体积</span><span class="num"><span id="tbNum">0.04</span> MB</span></div>
-          <input type="range" id="tb" min="0.01" max="0.15" step="0.01" value="0.04">
-        </div>
-        <div class="row"><label>每张图占用</label><span class="val" id="perPhoto">—</span></div>
+        <h2>套餐配额与按量单价</h2>
+        <div class="row"><label>调用次数配额</label><input id="qCall" type="number" value="200000" step="10000"><span class="unit">次/月</span></div>
+        <div class="row"><label>容量配额</label><input id="qCap" type="number" value="2" step="0.5"><span class="unit">GB</span></div>
+        <div class="row"><label>CDN 流量配额</label><input id="qCdn" type="number" value="5" step="1"><span class="unit">GB/月</span></div>
+        <div class="row"><label>超额 · 调用</label><input id="pCall" type="number" value="0.5" step="0.1"><span class="unit">元/万次</span></div>
+        <div class="row"><label>超额 · 容量</label><input id="pCap" type="number" value="0.1" step="0.01"><span class="unit">元/GB/日</span></div>
+        <div class="row"><label>超额 · CDN</label><input id="pCdn" type="number" value="0.21" step="0.01"><span class="unit">元/GB</span></div>
+        <p class="hint">官方基础套餐口径：20 万次 + 2GB + 5GB/月，19.9 元。容量按日计费，一个月按 30 天算，即 3 元/GB/月。</p>
       </div>
 
       <div class="card">
-        <h2>③ 免费用户（漏斗层）</h2>
-        <div class="field"><div class="top"><span class="name">人数</span><span class="num" id="fnN">20</span></div><input type="range" id="fn" min="0" max="200" step="5" value="20"></div>
-        <div class="field"><div class="top"><span class="name">每人月项目数</span><span class="num" id="fpN">1</span></div><input type="range" id="fp" min="1" max="8" step="1" value="1"></div>
-        <div class="field"><div class="top"><span class="name">单项目照片上限</span><span class="num" id="fhN">150</span></div><input type="range" id="fh" min="50" max="400" step="10" value="150"></div>
-        <div class="field"><div class="top"><span class="name">项目存活天数</span><span class="num" id="fdN">30 天</span></div><input type="range" id="fd" min="7" max="366" step="1" value="30"></div>
+        <h2>画质档位（单张 preview 体积）</h2>
+        <div class="row"><label>标准　1600 / q75</label><input id="qStd" type="number" value="0.25" step="0.05"><span class="unit">MB</span></div>
+        <div class="row"><label>高清　2048 / q82（现状）</label><input id="qHd" type="number" value="0.55" step="0.05"><span class="unit">MB</span></div>
+        <div class="row"><label>高清Pro　2880 / q90</label><input id="qPro" type="number" value="1.20" step="0.1"><span class="unit">MB</span></div>
+        <div class="row"><label>原画质　4096 / q92</label><input id="qOrg" type="number" value="2.20" step="0.1"><span class="unit">MB</span></div>
+        <div class="row"><label>thumbnail 缩略图</label><input id="thumbMB" type="number" value="0.04" step="0.005"><span class="unit">MB</span></div>
+        <p class="hint">前两档开放给免费 + 标准；后两档仅专业可见。前台不显示 MB，只显示档位名。</p>
       </div>
 
       <div class="card">
-        <h2>④ 付费用户（收入层）</h2>
-        <div class="field"><div class="top"><span class="name">人数</span><span class="num" id="pnN">10</span></div><input type="range" id="pn" min="1" max="200" step="1" value="10"></div>
-        <div class="field"><div class="top"><span class="name">每人月项目数</span><span class="num" id="ppN">2</span></div><input type="range" id="pp" min="1" max="10" step="1" value="2"></div>
-        <div class="field"><div class="top"><span class="name">单项目照片上限</span><span class="num" id="phN">250</span></div><input type="range" id="ph" min="50" max="800" step="10" value="250"></div>
-        <div class="field"><div class="top"><span class="name">项目存活天数</span><span class="num" id="pdN">30 天</span></div><input type="range" id="pd" min="7" max="366" step="1" value="30"></div>
-        <div class="field"><div class="top"><span class="name">每项目模特数</span><span class="num" id="mdN">2</span></div><input type="range" id="md" min="1" max="5" step="1" value="2"></div>
+        <h2>四项技术优化（勾选后自动生效）</h2>
+        <label class="switch"><input id="o1" type="checkbox" checked><div><div class="t">1. 小程序 <code>&lt;image&gt;</code> 直接用 fileID</div><div class="d">不再逐张调 getTempFileURL：单张调用 17 → 11 次</div></div></label>
+        <label class="switch"><input id="o2" type="checkbox" checked><div><div class="t">2. getPreview 批量预取相邻 ±2 张</div><div class="d">单张调用再省 3 次：11 → 8 次</div></div></label>
+        <label class="switch"><input id="o3" type="checkbox" checked><div><div class="t">3. 项目到期「归档」而非删除</div><div class="d">只删 preview、保留 thumb + 文件名：归档后单张从 0.59MB 降到 0.025MB（省 96%），摄影师仍能看到历史项目</div></div></label>
+        <label class="switch"><input id="o4" type="checkbox" checked><div><div class="t">4. thumbnail 降到 320 / q70</div><div class="d">0.04 → 0.025 MB，列表页 CDN 同步下降</div></div></label>
       </div>
 
       <div class="card">
-        <h2>⑤ 定价</h2>
-        <div class="field">
-          <div class="top"><span class="name">月付价 元/月</span><span class="num" id="prN">4.9</span></div>
-          <input type="range" id="pr" min="0" max="30" step="0.5" value="4.9">
-        </div>
-        <div class="row"><label>年付建议标价（8.5 折）</label><span class="val" id="yr">—</span></div>
-        <div class="row"><label>年付折合月均</label><span class="val" id="yrm">—</span></div>
+        <h2>浏览行为假设</h2>
+        <div class="row"><label>平均模特数 / 项目</label><input id="md" type="number" value="2.5" step="0.5"><span class="unit">人</span></div>
+        <div class="row"><label>点开大图比例</label><input id="pv" type="number" value="0.35" step="0.05"><span class="unit"></span></div>
+        <div class="row"><label>每人浏览轮次</label><input id="rounds" type="number" value="1.5" step="0.5"><span class="unit">轮</span></div>
+        <div class="row"><label>历史归档量 / 在线量</label><input id="archRatio" type="number" value="1.0" step="0.5"><span class="unit">倍</span></div>
+        <p class="hint">CDN 单张 = (缩略图 + 大图比例 × preview) × 模特数 × 轮次。第 3 项优化关掉时，归档项目仍占满 preview，建议把「历史归档量」调大到 3~5 模拟没人归档的情况。</p>
       </div>
+
+      <div class="card">
+        <h2>三档配置</h2>
+        <table>
+          <thead><tr><th>档位</th><th>月费</th><th>人数</th><th>在线额度</th><th>画质</th><th>额度使用率</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>免费</td>
+              <td><input id="fFee" type="number" value="0" step="0.1" style="width:56px"></td>
+              <td><input id="fN" type="number" value="20" step="1" style="width:52px"></td>
+              <td><input id="fQ" type="number" value="150" step="50" style="width:62px"></td>
+              <td><select id="fS" style="width:96px"><option value="0">标准</option><option value="1">高清</option><option value="2">高清Pro</option><option value="3">原画质</option></select></td>
+              <td><input id="fU" type="number" value="40" step="5" style="width:52px">%</td>
+            </tr>
+            <tr>
+              <td>标准</td>
+              <td><input id="sFee" type="number" value="4.9" step="0.1" style="width:56px"></td>
+              <td><input id="sN" type="number" value="15" step="1" style="width:52px"></td>
+              <td><input id="sQ" type="number" value="1000" step="100" style="width:62px"></td>
+              <td><select id="sS" style="width:96px"><option value="0">标准</option><option value="1" selected>高清</option><option value="2">高清Pro</option><option value="3">原画质</option></select></td>
+              <td><input id="sU" type="number" value="40" step="5" style="width:52px">%</td>
+            </tr>
+            <tr>
+              <td>专业</td>
+              <td><input id="pFee" type="number" value="9.9" step="0.1" style="width:56px"></td>
+              <td><input id="pN" type="number" value="3" step="1" style="width:52px"></td>
+              <td><input id="pQ" type="number" value="1200" step="100" style="width:62px"></td>
+              <td><select id="pS" style="width:96px"><option value="0">标准</option><option value="1">高清</option><option value="2" selected>高清Pro</option><option value="3">原画质</option></select></td>
+              <td><input id="pU" type="number" value="80" step="5" style="width:52px">%</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="hint">「在线额度」以张为单位，是真正的闸门：同时未被归档的照片上限。项目数不进成本模型，只是前台文案。<br>「额度使用率」= 平均实际在线量占额度的比例，爱好者取 30~40%，重度用户取 80~100%。</p>
+        <div class="row" style="margin-top:8px"><label>免费档项目数 / 月（仅展示）</label><input id="fP" type="number" value="1" step="1"><span class="unit">个</span></div>
+        <div class="row"><label>标准档项目数 / 月（仅展示）</label><input id="sP" type="number" value="5" step="1"><span class="unit">个</span></div>
+        <div class="row"><label>专业档项目数 / 月（仅展示）</label><input id="pP" type="number" value="9" step="1"><span class="unit">个</span></div>
+      </div>
+
+      <div class="card">
+        <h2>加量包</h2>
+        <label class="switch"><input id="aoOn" type="checkbox" checked><div><div class="t">开放加量包</div><div class="d">超出基础额度的专业用户按 GB 购买</div></div></label>
+        <div class="row"><label>单价</label><input id="aoPrice" type="number" value="6.9" step="0.1"><span class="unit">元/GB</span></div>
+        <div class="row"><label>每人购买</label><input id="aoGB" type="number" value="1" step="0.5"><span class="unit">GB</span></div>
+        <div class="row"><label>专业用户购买比例</label><input id="aoRate" type="number" value="30" step="5"><span class="unit">%</span></div>
+      </div>
+
     </div>
 
+    <!-- ========== 右：结果 ========== -->
     <div>
-      <div class="verdict" id="verdict">—</div>
 
-      <div class="kpi">
-        <div><div class="lb">月照片吞吐</div><div class="vv" id="kVol">—</div></div>
-        <div><div class="lb">实际云账单</div><div class="vv" id="kBill">—</div></div>
-        <div><div class="lb">月净利</div><div class="vv" id="kNet">—</div></div>
-        <div><div class="lb">单付费用户成本</div><div class="vv" id="kUnit">—</div></div>
+      <div class="kpis">
+        <div class="kpi"><div class="k">月收入</div><div class="v" id="kRev">-</div><div class="n" id="kRevN">-</div></div>
+        <div class="kpi"><div class="k">云账单</div><div class="v" id="kBill">-</div><div class="n" id="kBillN">-</div></div>
+        <div class="kpi"><div class="k">其他固定成本</div><div class="v" id="kFix">-</div><div class="n" id="kFixN">认证 + 个体户</div></div>
+        <div class="kpi"><div class="k">月净利</div><div class="v" id="kNet">-</div><div class="n" id="kNetN">-</div></div>
+        <div class="kpi"><div class="k">毛利率</div><div class="v" id="kGm">-</div><div class="n" id="kGmN">-</div></div>
       </div>
 
       <div class="card">
-        <h2>配额使用（19.9 基础套餐口径）</h2>
-        <div class="bar"><div class="top"><span>调用次数 20 万/月</span><span id="bCT">—</span></div><div class="track"><div class="fill" id="bC" style="width:0;background:#185FA5"></div></div></div>
-        <div class="bar"><div class="top"><span>容量 2GB（占用，不清零）</span><span id="bAT">—</span></div><div class="track"><div class="fill" id="bA" style="width:0;background:#BA7517"></div></div></div>
-        <div class="bar"><div class="top"><span>CDN 流量 5GB/月</span><span id="bDT">—</span></div><div class="track"><div class="fill" id="bD" style="width:0;background:#639922"></div></div></div>
-        <div class="hint" id="room">—</div>
+        <h2>配额占用</h2>
+        <div class="barlab"><span>调用次数</span><span id="bCT">-</span></div>
+        <div class="bar"><i id="bC" style="background:#185FA5"></i></div>
+        <div class="barlab" style="margin-top:8px"><span>容量（在线 + 归档）</span><span id="bAT">-</span></div>
+        <div class="bar"><i id="bA" style="background:#B26A00"></i></div>
+        <div class="barlab" style="margin-top:8px"><span>CDN 流量</span><span id="bDT">-</span></div>
+        <div class="bar"><i id="bD" style="background:#2E7D32"></i></div>
+        <div class="verdict good" id="room" style="margin-top:10px">-</div>
       </div>
 
       <div class="card">
-        <h2>账单拆解</h2>
+        <h2>分档单位经济</h2>
         <table>
-          <thead><tr><th>项目</th><th class="n">用量</th><th class="n">费用</th></tr></thead>
-          <tbody id="billBody"><tr><td colspan="3">—</td></tr></tbody>
+          <thead><tr><th>档位</th><th>人数</th><th>在线量</th><th>占用容量</th><th>人月成本</th><th>月费</th><th>毛利/人</th><th>毛利率</th></tr></thead>
+          <tbody id="tierBody"></tbody>
+        </table>
+        <p class="hint">「人月成本」= 云账单按各档资源占比分摊 ÷ 人数，含套餐费摊薄，所以人数越多越便宜。</p>
+      </div>
+
+      <div class="card">
+        <h2>加量包收益</h2>
+        <table>
+          <thead><tr><th>购买人数</th><th>月收入</th><th>硬成本</th><th>毛利</th><th>毛利率</th></tr></thead>
+          <tbody id="aoBody"></tbody>
+        </table>
+        <p class="hint">硬成本 = 容量 3 元/GB/月 + 随之产生的调用与 CDN，超过 5GB 后容量是最贵的一项，所以售价低于 5 元不做。</p>
+      </div>
+
+      <div class="card">
+        <h2>规模灵敏度（三档人数等比放大）</h2>
+        <table>
+          <thead><tr><th>规模</th><th>付费人数</th><th>月收入</th><th>云账单</th><th>月净利</th></tr></thead>
+          <tbody id="simBody"></tbody>
         </table>
       </div>
 
       <div class="card">
-        <h2>盈亏 sensitivity</h2>
-        <table>
-          <thead><tr><th>付费用户数</th><th class="n">收入</th><th class="n">云账单</th><th class="n">净利</th></tr></thead>
-          <tbody id="simBody"><tr><td colspan="4">—</td></tr></tbody>
-        </table>
-        <div class="hint">免费用户数固定为当前设定值，只放大付费规模。</div>
+        <h2>前台文案预览（摄影师看到的，不出现 MB）</h2>
+        <div class="front" id="frontBody"></div>
       </div>
 
       <div class="card">
-        <h2>口径说明</h2>
-        <div class="note">
-          · 调用次数为合并口径：云函数调用 + 数据库读写 + 存储上传下载计同一额度。单张上传约 4 次，模特浏览一遍约 13 次。<br>
-          · 超出套餐后按官方量价：调用 <code>0.5 元/万次</code>、容量 <code>0.1 元/GB/日</code>、CDN <code>0.21 元/GB</code>。<br>
-          · 容量稳态 = 月照片量 × 单张体积 × 存活月数。项目不清理时会持续累积，这是最危险的一项。<br>
-          · 上行流量由电脑浏览器上传产生，走的是 CDN 回源，不计入云函数调用；此处的三联单均在套餐配额内。<br>
-          · 网页端上传本身不消耗服务器端计算资源，压缩在浏览器 canvas 内完成，这正是这套架构的省钱点。
-        </div>
+        <h2>结论</h2>
+        <div class="verdict good" id="verdict">-</div>
       </div>
+
     </div>
   </div>
-
-  <p class="note" style="margin-top:22px;">
-    数据基准：微信云开发基础套餐官方配额（调用 20 万次/月、容量 2GB、CDN 5GB/月、云函数资源 10 万 GBs）。实际用量请以云开发控制台「用量统计」为准，本表用于数量级判断与方案比选。
-  </p>
 </div>
 
 <script>
-(function(){
-  var $ = function(id){ return document.getElementById(id); };
-  var CALLQ = 200000, CAPQ = 2048, CDNQ = 5120;
-  var P_CALL = 0.5 / 10000, P_CAP = 0.1 * 30, P_CDN = 0.21;
+function $(id){ return document.getElementById(id); }
+function num(id, d){ var v = parseFloat($(id).value); return isNaN(v) ? d : v; }
+function chk(id){ return !!$(id).checked; }
+function fmt(n){ n = Math.round(n); return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function gb(mb){ return (mb / 1024); }
 
-  function n(id){ return parseFloat($(id).value) || 0; }
-  function fmt(v, d){ return v.toLocaleString(undefined, {minimumFractionDigits: d || 0, maximumFractionDigits: d || 0}); }
+function bar(idv, idt, usage, quota, unit, color){
+  var pct = Math.min(usage / quota * 100, 100);
+  $(idv).style.width = pct + '%';
+  $(idv).style.background = usage > quota ? '#C0392B' : color;
+  $(idt).textContent = fmt(usage) + unit + '　' + pct.toFixed(0) + '%' + (usage > quota ? '　已超额' : '');
+}
 
-  function calc(){
-    var planFee = n('plan');
-    var fixedMonthly = planFee + n('cert') / 12 + n('biz') / 12;
-    var pv = n('pv'), tb = n('tb'), perPhoto = pv + tb;
+/* ---------- 核心计算 ---------- */
+function model(scale){
+  scale = scale || 1;
+  var planFee = num('planFee', 19.9);
+  var qCall = num('qCall', 200000), qCap = num('qCap', 2), qCdn = num('qCdn', 5);
+  var pCall = num('pCall', 0.5), pCap = num('pCap', 0.1), pCdn = num('pCdn', 0.21);
 
-    var fnN = n('fn'), fp = n('fp'), fh = n('fh'), fd = n('fd');
-    var pnN = n('pn'), pp = n('pp'), ph = n('ph'), pd = n('pd'), md = n('md');
-    var price = n('pr'), fee = n('fee');
+  var QM = [num('qStd',0.25), num('qHd',0.55), num('qPro',1.2), num('qOrg',2.2)];
+  var QN = ['标准', '高清', '高清Pro', '原画质'];
+  var thumbIn = num('thumbMB', 0.04);
+  var thumb = chk('o4') ? Math.min(thumbIn, 0.025) : thumbIn;
 
-    var freePhotos = fnN * fp * fh;
-    var paidPhotos = pnN * pp * ph;
-    var totalPhotos = freePhotos + paidPhotos;
+  var callPer = 17;
+  if (chk('o1')) callPer -= 6;
+  if (chk('o2')) callPer -= 3;
 
-    var lifeF = Math.max(fd / 30, 7 / 30);
-    var lifeP = Math.max(pd / 30, 7 / 30);
+  var md = num('md', 2.5), pv = num('pv', 0.35), rounds = num('rounds', 1.5);
+  var archRatio = num('archRatio', 1.0);
 
-    var callUsage = totalPhotos * 17;
-    var cdnMB = totalPhotos * (tb + 0.3 * pv) * md * 1.5;
-    var capMB = freePhotos * perPhoto * lifeF + paidPhotos * perPhoto * lifeP;
+  var defs = [
+    { k:'f', name:'免费',  fee:num('fFee',0),   n:num('fN',20), quota:num('fQ',150),  q:parseInt($('fS').value,10), u:num('fU',40)/100, proj:num('fP',1) },
+    { k:'s', name:'标准',  fee:num('sFee',4.9), n:num('sN',15), quota:num('sQ',1000), q:parseInt($('sS').value,10), u:num('sU',40)/100, proj:num('sP',5) },
+    { k:'p', name:'专业',  fee:num('pFee',9.9), n:num('pN',3),  quota:num('pQ',1200), q:parseInt($('pS').value,10), u:num('pU',80)/100, proj:num('pP',9) }
+  ];
 
-    var overCall = Math.max(0, callUsage - CALLQ) * P_CALL;
-    var overCap = Math.max(0, (capMB - CAPQ)) / 1024 * P_CAP;
-    var overCdn = Math.max(0, (cdnMB - CDNQ)) / 1024 * P_CDN;
-    var bill = planFee + overCall + overCap + overCdn;
-
-    var revenue = pnN * price * (1 - fee / 100);
-    var net = revenue - bill - n('cert') / 12 - n('biz') / 12;
-
-    var paidCostShare = totalPhotos > 0 ? (bill * paidPhotos / totalPhotos) : 0;
-    var perPaidUser = pnN > 0 ? paidCostShare / pnN : 0;
-
-    $('fixed').textContent = fixedMonthly.toFixed(1) + ' 元/月';
-    $('perPhoto').textContent = Math.round(perPhoto * 1024) + ' KB';
-    $('kVol').textContent = fmt(totalPhotos) + ' 张';
-    $('kBill').textContent = bill.toFixed(1) + ' 元';
-    $('kNet').textContent = (net >= 0 ? '+' : '') + net.toFixed(1) + ' 元';
-    $('kNet').className = 'vv ' + (net >= 0 ? 'good' : 'bad');
-    $('kUnit').textContent = perPaidUser.toFixed(2) + ' 元';
-    $('kUnit').className = 'vv ' + (perPaidUser < price * 0.5 ? 'good' : (perPaidUser < price ? 'warn' : 'bad'));
-    $('yr').textContent = Math.round(price * 12 * 0.85 / 5) * 5 + ' 元/年';
-    $('yrm').textContent = (price * 0.85).toFixed(2) + ' 元/月';
-
-    ['fnN:'+fnN,'fpN:'+fp,'fhN:'+fh,'pnN:'+pnN,'ppN:'+pp,'phN:'+ph,'mdN:'+md,'prN:'+price.toFixed(1),
-     'pvNum:'+pv.toFixed(2),'tbNum:'+tb.toFixed(2),
-     'fdN:'+(fd>=366?'永不过期':fd+' 天'),'pdN:'+(pd>=366?'永不过期':pd+' 天')].forEach(function(s){
-      var p = s.split(':'), el = $(p[0]); if(el) el.textContent = p[1];
-    });
-
-    function bar(idv, idt, usage, quota, unitTxt, dp){
-      var pct = Math.min(usage / quota * 100, 100);
-      $(idv).style.width = pct + '%';
-      $(idv).style.background = usage > quota ? '#E24B4A' : $(idv).dataset.c;
-      var txt = usage.toLocaleString(undefined, {minimumFractionDigits: dp || 0, maximumFractionDigits: dp || 0});
-      $(idt).textContent = txt + unitTxt + ' (' + pct.toFixed(0) + '%)' + (usage > quota ? ' 已超，开始按量计费' : '');
-    }
-    $('bC').dataset.c = '#185FA5'; $('bA').dataset.c = '#BA7517'; $('bD').dataset.c = '#639922';
-    bar('bC','bCT', callUsage, CALLQ, ' 次', 0);
-    bar('bA','bAT', capMB / 1024, CAPQ / 1024, ' GB', 2);
-    bar('bD','bDT', cdnMB / 1024, CDNQ / 1024, ' GB', 2);
-
-    var headRooms = [];
-    var perPaid = { c: 0, a: 0, d: 0 };
-    if(totalPhotos > 0 && pnN > 0){
-      perPaid = { c: pp*ph*17, a: pp*ph*perPhoto*lifeP, d: pp*ph*(tb+0.3*pv)*md*1.5 };
-      headRooms.push(Math.max(0,(CALLQ-callUsage))/perPaid.c);
-      headRooms.push(Math.max(0,(CAPQ-capMB))/perPaid.a);
-      headRooms.push(Math.max(0,(CDNQ-cdnMB))/perPaid.d);
-    }
-    var room = headRooms.length ? Math.floor(Math.min.apply(null, headRooms)) : 0;
-    var marginal = perPaid.c*P_CALL + perPaid.a/1024*P_CAP + perPaid.d/1024*P_CDN;
-    if(room > 0){
-      $('room').textContent = '配额还能再容纳约 ' + room + ' 个付费用户（之后开始按量计费），当前每多一个用户基本不花钱。';
-    } else {
-      $('room').textContent = '配额已满，此后每增加 1 个付费用户按量计费约 ' + marginal.toFixed(2) + ' 元/月——相对 ' + price.toFixed(1) + ' 元的售价仍有余量，不必急着升级套餐。';
-    }
-
-    var rows = [
-      ['云开发套餐', planFee.toFixed(1) + ' 元/月基础费', planFee.toFixed(2)],
-      ['调用次数超量', fmt(Math.max(0, callUsage - CALLQ)) + ' 次', overCall.toFixed(2)],
-      ['容量超量', fmt(Math.max(0, (capMB - CAPQ)/1024*100)/100) + ' GB', overCap.toFixed(2)],
-      ['CDN 超量', fmt(Math.max(0, (cdnMB - CDNQ)/1024*100)/100) + ' GB', overCdn.toFixed(2)],
-      ['认证 + 个体户', '年费折月', (n('cert')/12 + n('biz')/12).toFixed(2)],
-      ['合计', '—', (bill + n('cert')/12 + n('biz')/12).toFixed(2)]
-    ].map(function(r){
-      return '<tr><td>' + r[0] + '</td><td class="n">' + r[1] + '</td><td class="n">' + r[2] + '</td></tr>';
-    }).join('');
-    $('billBody').innerHTML = rows;
-
-    var sim = [pnN*2, pnN*4, pnN*8].map(function(k){
-      var pPaid = k * pp * ph;
-      var tP = freePhotos + pPaid;
-      var cU = tP * 17, cdU = tP * (tb+0.3*pv)*md*1.5, caU = freePhotos*perPhoto*lifeF + pPaid*perPhoto*lifeP;
-      var b = planFee + Math.max(0,cU-CALLQ)*P_CALL + Math.max(0,caU-CAPQ)/1024*P_CAP + Math.max(0,cdU-CDNQ)/1024*P_CDN;
-      var rv = k * price * (1-fee/100);
-      var pf = rv - b - n('cert')/12 - n('biz')/12;
-      return '<tr><td>' + k + ' 人</td><td class="n">' + rv.toFixed(1) + '</td><td class="n">' + b.toFixed(1) + '</td><td class="n ' + (pf>=0?'good':'bad') + '">' + (pf>=0?'+':'') + pf.toFixed(1) + '</td></tr>';
-    });
-    sim.unshift('<tr><td>' + pnN + ' 人（当前）</td><td class="n">' + revenue.toFixed(1) + '</td><td class="n">' + bill.toFixed(1) + '</td><td class="n ' + (net>=0?'good':'bad') + '">' + (net>=0?'+':'') + net.toFixed(1) + '</td></tr>');
-    $('simBody').innerHTML = sim.join('');
-
-    var v = $('verdict');
-    var unitTxt = perPaidUser.toFixed(2);
-    if(net < 0){
-      v.className = 'verdict bad';
-            v.innerHTML = '<strong>当前配置亏损 ' + Math.abs(net).toFixed(1) + ' 元/月。</strong>单付费用户资源成本 ' + unitTxt + ' 元 vs 售价 ' + price.toFixed(1) + ' 元。优先做三件事：把 preview 降到 0.25、项目存活天数压到 30 天、把免费用户额度收紧。';
-    } else if(perPaidUser > price * 0.6){
-      v.className = 'verdict warn';
-      v.innerHTML = '<strong>净利 ' + net.toFixed(1) + ' 元/月，但毛利偏薄。</strong>单付费用户已占掉售价的 ' + Math.round(perPaidUser/price*100) + '%。规模再放大就翻负，建议先把 preview 降到 0.25MB、项目 30 天过期这两件事做掉，成本能砍一半以上。';
-    } else if(net < 20){
-      v.className = 'verdict warn';
-      v.innerHTML = '<strong>刚过盈亏线，净利仅 ' + net.toFixed(1) + ' 元/月。</strong>单付费用户资源成本 ' + unitTxt + ' 元，毛利率本身没问题，瓶颈在固定成本：' + fixedMonthly.toFixed(1) + ' 元/月里，认证+个体户占 ' + (n('cert')/12 + n('biz')/12).toFixed(1) + ' 元。再多 ' + Math.ceil((20 - net) / Math.max(price*(1-fee/100), 0.01)) + ' 个付费用户即可到 +20 元。';
-    } else {
-      v.className = 'verdict good';
-      v.innerHTML = '<strong>健康。</strong>月净利 ' + net.toFixed(1) + ' 元，单付费用户资源成本仅 ' + unitTxt + ' 元（占售价 ' + Math.round(perPaidUser/price*100) + '%），毛利率 ' + Math.round((1-perPaidUser/price)*100) + '%）。' + (room > 0 ? '配额还能再容纳约 ' + room + ' 个付费用户。' : '配额已满，此后新增一个付费用户按量计费约 ' + marginal.toFixed(2) + ' 元/月，规模越大单位成本越低。');
-    }
+  var tiers = [], i;
+  for (i = 0; i < defs.length; i++){
+    var d = defs[i];
+    var n = Math.round(d.n * scale);
+    var online = n * d.quota * d.u;                 // 在线张数
+    var P = QM[d.q], T = thumb;
+    var capMB = online * (P + T) + online * archRatio * (chk('o3') ? T : (P + T));
+    var calls = online * callPer;
+    var cdnMB = online * (T + pv * P) * md * rounds;
+    var raw = calls / 10000 * pCall + gb(capMB) * pCap * 30 + gb(cdnMB) * pCdn;
+    tiers.push({ name:d.name, fee:d.fee, n:n, quota:d.quota, q:d.q, qn:QN[d.q], u:d.u,
+                 proj:d.proj, online:online, capMB:capMB, calls:calls, cdnMB:cdnMB,
+                 P:P, T:T, raw:raw, addon:false });
   }
 
-  ['plan','cert','biz','fee','pv','tb','fn','fp','fh','fd','pn','pp','ph','pd','md','pr'].forEach(function(id){
-    $(id).addEventListener('input', calc);
+  // 加量包视为第四个虚拟档
+  var aoOn = chk('aoOn'), aoPrice = num('aoPrice', 6.9), aoGB = num('aoGB', 1), aoRate = num('aoRate', 30);
+  var proQ = parseInt($('pS').value, 10);
+  var aoN = aoOn ? Math.round(defs[2].n * scale * aoRate / 100) : 0;
+  var ao = null;
+  if (aoN > 0){
+    var perPhoto = QM[proQ] + thumb;
+    var aoOnline = aoN * aoGB * 1024 / perPhoto;
+    var aoCapMB = aoOnline * perPhoto + aoOnline * archRatio * (chk('o3') ? thumb : perPhoto);
+    var aoCalls = aoOnline * callPer;
+    var aoCdnMB = aoOnline * (thumb + pv * QM[proQ]) * md * rounds;
+    var aoRaw = aoCalls / 10000 * pCall + gb(aoCapMB) * pCap * 30 + gb(aoCdnMB) * pCdn;
+    ao = { name:'加量包', fee:aoPrice * aoGB, n:aoN, online:aoOnline, capMB:aoCapMB,
+           calls:aoCalls, cdnMB:aoCdnMB, raw:aoRaw, addon:true };
+    tiers.push(ao);
+  }
+
+  // 汇总
+  var sum = { calls:0, capMB:0, cdnMB:0, raw:0, rev:0, paid:0 };
+  for (i = 0; i < tiers.length; i++){
+    sum.calls += tiers[i].calls; sum.capMB += tiers[i].capMB;
+    sum.cdnMB += tiers[i].cdnMB; sum.raw += tiers[i].raw;
+    sum.rev += tiers[i].fee * tiers[i].n;
+    if (!tiers[i].addon) sum.paid += (tiers[i].fee > 0 ? tiers[i].n : 0);
+  }
+
+  var overCall = Math.max(0, sum.calls - qCall) / 10000 * pCall;
+  var overCap = Math.max(0, gb(sum.capMB) - qCap) * pCap * 30;
+  var overCdn = Math.max(0, gb(sum.cdnMB) - qCdn) * pCdn;
+  var bill = planFee + overCall + overCap + overCdn;
+
+  // 分摊
+  for (i = 0; i < tiers.length; i++){
+    var share = sum.raw > 0 ? tiers[i].raw / sum.raw : 1 / tiers.length;
+    tiers[i].alloc = bill * share;
+    tiers[i].costPer = tiers[i].n > 0 ? tiers[i].alloc / tiers[i].n : 0;
+  }
+
+  var fix = num('certYear', 30) / 12 + num('otherFix', 0) + (chk('bizOn') ? num('bizYear', 300) / 12 : 0);
+  var net = sum.rev - bill - fix;
+
+  return { tiers:tiers, ao:ao, aoPrice:aoPrice, aoGB:aoGB, sum:sum, bill:bill, fix:fix,
+           net:net, rev:sum.rev, paid:sum.paid, qCall:qCall, qCap:qCap, qCdn:qCdn,
+           overCall:overCall, overCap:overCap, overCdn:overCdn, planFee:planFee, QM:QM, thumb:thumb };
+}
+
+/* ---------- 渲染 ---------- */
+function render(){
+  var m = model(1);
+  var i;
+
+  $('kRev').textContent = m.rev.toFixed(1);
+  $('kRevN').textContent = '付费 ' + m.paid + ' 人' + (m.ao ? ' + 加量包 ' + m.ao.n + ' 人' : '');
+  $('kBill').textContent = m.bill.toFixed(1);
+  $('kBillN').textContent = '套餐 ' + m.planFee + ' + 超额 ' + (m.bill - m.planFee).toFixed(1);
+  $('kFix').textContent = m.fix.toFixed(1);
+  $('kFixN').textContent = '认证 ' + (num('certYear', 30) / 12).toFixed(1) +
+    (chk('bizOn') ? ' + 个体户 ' + (num('bizYear', 300) / 12).toFixed(0) : ' · 未办个体户');
+  $('kNet').textContent = (m.net >= 0 ? '+' : '') + m.net.toFixed(1);
+  $('kNet').style.color = m.net >= 0 ? '#2E7D32' : '#C0392B';
+  $('kGm').textContent = m.rev > 0 ? (m.net / m.rev * 100).toFixed(0) + '%' : '-';
+  $('kGmN').textContent = '净利 / 收入';
+
+  bar('bC','bCT', m.sum.calls, m.qCall, ' 次', '#185FA5');
+  bar('bA','bAT', Math.round(gb(m.sum.capMB) * 100) / 100, m.qCap, ' GB', '#B26A00');
+  bar('bD','bDT', Math.round(gb(m.sum.cdnMB) * 100) / 100, m.qCdn, ' GB', '#2E7D32');
+
+  // 余量
+  var perPaid = { c:0, a:0, d:0 };
+  for (i = 0; i < m.tiers.length; i++){
+    var t = m.tiers[i];
+    if (t.addon || t.n === 0) continue;
+    perPaid.c += t.calls / t.n; perPaid.a += t.capMB / t.n; perPaid.d += t.cdnMB / t.n;
+  }
+  var room = 0;
+  if (perPaid.a > 0){
+    room = Math.floor(Math.min(
+      Math.max(0, m.qCall - m.sum.calls) / (perPaid.c || 1),
+      Math.max(0, m.qCap * 1024 - m.sum.capMB) / perPaid.a,
+      Math.max(0, m.qCdn * 1024 - m.sum.cdnMB) / (perPaid.d || 1)
+    ));
+  }
+  var overAny = (m.sum.calls > m.qCall) || (gb(m.sum.capMB) > m.qCap) || (gb(m.sum.cdnMB) > m.qCdn);
+  var rt = $('room');
+  if (overAny){
+    rt.className = 'verdict warn';
+    rt.innerHTML = '已超出配额，正在按量计费：容量 +' + m.overCap.toFixed(1) + ' 元、调用 +' + m.overCall.toFixed(1) +
+      ' 元、CDN +' + m.overCdn.toFixed(1) + ' 元。容量是最贵的一项（3 元/GB/月），' +
+      '若月超额费持续超过 40 元，就该比对更高档套餐了。';
+  } else {
+    rt.className = 'verdict good';
+    rt.innerHTML = '三项都在配额内，本月只需付套餐费 ' + m.planFee + ' 元。按当前单用户用量，还能再容纳约 ' + room + ' 个付费用户。';
+  }
+
+  // 分档表
+  var rows = '';
+  for (i = 0; i < m.tiers.length; i++){
+    var t = m.tiers[i];
+    var margin = t.fee - t.costPer;
+    var gm = t.fee > 0 ? (margin / t.fee * 100) : 0;
+    var cls = t.fee === 0 ? '' : (margin > 0 ? 'good' : 'bad');
+    rows += '<tr>' +
+      '<td>' + t.name + (t.addon ? '（+' + m.aoGB + 'GB）' : '') + '</td>' +
+      '<td class="n">' + t.n + '</td>' +
+      '<td class="n">' + (t.addon ? (m.aoGB + 'GB') : fmt(t.online) + ' 张') + '</td>' +
+      '<td class="n">' + (Math.round(gb(t.capMB) * 100) / 100).toFixed(2) + ' GB</td>' +
+      '<td class="n">' + t.costPer.toFixed(2) + '</td>' +
+      '<td class="n">' + t.fee.toFixed(1) + '</td>' +
+      '<td class="n ' + cls + '">' + (t.fee === 0 ? '—' : (margin >= 0 ? '+' : '') + margin.toFixed(2)) + '</td>' +
+      '<td class="n ' + cls + '">' + (t.fee === 0 ? '—' : gm.toFixed(0) + '%') + '</td>' +
+      '</tr>';
+  }
+  $('tierBody').innerHTML = rows;
+
+  // 加量包
+  var aoRows = '';
+  if (m.ao){
+    var cost = m.ao.alloc / Math.max(1, m.ao.n);
+    var g = m.ao.fee - cost;
+    aoRows = '<tr><td class="n">' + m.ao.n + '</td><td class="n">' + (m.ao.fee * m.ao.n).toFixed(1) +
+      '</td><td class="n">' + (cost * m.ao.n).toFixed(1) + '</td><td class="n ' + (g >= 0 ? 'good' : 'bad') +
+      '">' + (g * m.ao.n).toFixed(1) + '</td><td class="n ' + (g >= 0 ? 'good' : 'bad') + '">' +
+      (m.ao.fee > 0 ? (g / m.ao.fee * 100).toFixed(0) : 0) + '%</td></tr>';
+  } else {
+    aoRows = '<tr><td colspan="5" style="text-align:center;color:#646A73">未开放</td></tr>';
+  }
+  $('aoBody').innerHTML = aoRows;
+
+  // 灵敏度
+  var sim = '';
+  [1, 2, 4, 8].forEach(function(k){
+    var s = model(k);
+    sim += '<tr><td>' + k + '×</td><td class="n">' + s.paid + '</td><td class="n">' + s.rev.toFixed(1) +
+      '</td><td class="n">' + s.bill.toFixed(1) + '</td><td class="n ' + (s.net >= 0 ? 'good' : 'bad') + '">' +
+      (s.net >= 0 ? '+' : '') + s.net.toFixed(1) + '</td></tr>';
   });
+  $('simBody').innerHTML = sim;
 
-  function set(o){ Object.keys(o).forEach(function(k){ $(k).value = o[k]; }); calc(); }
-  $('q1').onclick = function(){ set({plan:19.9,cert:30,biz:300,fee:0.6,pv:0.55,tb:0.04,fn:20,fp:1,fh:150,fd:30,pn:10,pp:2,ph:250,pd:30,md:2,pr:4.9}); };
-  $('q2').onclick = function(){ set({plan:19.9,cert:30,biz:300,fee:0.6,pv:0.25,tb:0.04,fn:20,fp:1,fh:150,fd:30,pn:10,pp:2,ph:250,pd:30,md:2,pr:4.9}); };
-  $('q3').onclick = function(){ set({plan:19.9,cert:30,biz:300,fee:0.6,pv:0.25,tb:0.04,fn:50,fp:1,fh:150,fd:30,pn:30,pp:2,ph:250,pd:30,md:2,pr:4.9}); };
-  $('q4').onclick = function(){ set({plan:19.9,cert:30,biz:300,fee:0.6,pv:0.55,tb:0.04,fn:80,fp:2,fh:200,fd:120,pn:40,pp:3,ph:300,pd:120,md:2,pr:4.9}); };
+  // 前台文案
+  var front = '';
+  var defs = [
+    { name:'免费', fee:num('fFee',0), proj:num('fP',1), quota:num('fQ',150), u:num('fU',40), q:parseInt($('fS').value,10), extra:'' },
+    { name:'标准', fee:num('sFee',4.9), proj:num('sP',5), quota:num('sQ',1000), u:num('sU',40), q:parseInt($('sS').value,10), extra:'' },
+    { name:'专业', fee:num('pFee',9.9), proj:num('pP',9), quota:num('pQ',1200), u:num('pU',80), q:parseInt($('pS').value,10), extra:'画质可选至原画质' }
+  ];
+  for (i = 0; i < defs.length; i++){
+    var d = defs[i];
+    var used = Math.round(d.quota * d.u);
+    front += '<div class="l"><b>' + d.name + '（' + (d.fee === 0 ? '免费' : d.fee.toFixed(1) + ' 元/月') + '）</b><br>' +
+      d.proj + ' 个项目/月' + (d.name === '专业' ? '（不限）' : '') + ' · 单项目不限张数<br>' +
+      '在线额度 <b>' + used + ' / ' + fmt(d.quota) + ' 张</b>' + (d.extra ? ' · ' + d.extra : '') + '</div>';
+  }
+  $('frontBody').innerHTML = front;
 
-  calc();
-})();
+  // 结论
+  var v = $('verdict');
+  var worst = null;
+  for (i = 0; i < m.tiers.length; i++){
+    var t = m.tiers[i];
+    if (t.fee > 0 && t.costPer > t.fee) worst = t;
+  }
+  if (worst){
+    v.className = 'verdict bad';
+    v.innerHTML = '<strong>' + worst.name + '档倒挂：单人成本 ' + worst.costPer.toFixed(2) + ' 元 > 月费 ' +
+      worst.fee.toFixed(1) + ' 元。</strong>先把该档的在线额度或画质上限调小，或先做技术优化。当前月净利 ' + m.net.toFixed(1) + ' 元。';
+  } else if (m.net < 0){
+    v.className = 'verdict bad';
+    v.innerHTML = '<strong>整体亏损 ' + Math.abs(m.net).toFixed(1) + ' 元/月。</strong>固定成本 ' + m.fix.toFixed(1) +
+      ' 元 + 云账单 ' + m.bill.toFixed(1) + ' 元，收入 ' + m.rev.toFixed(1) + ' 元。人数不够摊薄固定成本是最常见的原因，' +
+      '先看规模灵敏度表里 4× 那一行的数字。';
+  } else if (m.net < 30){
+    v.className = 'verdict warn';
+    var need = Math.ceil((30 - m.net) / Math.max(0.1, m.tiers[1].fee));
+    v.innerHTML = '<strong>薄利：+ ' + m.net.toFixed(1) + ' 元/月。</strong>结构健康但没有安全垫，' +
+      '再增加约 ' + need + ' 个标准档用户即可跨过 30 元线。固定成本只有 ' + m.fix.toFixed(1) +
+      ' 元，卡点主要在人数，不在云资源。';
+  } else {
+    v.className = 'verdict good';
+    v.innerHTML = '<strong>健康：+ ' + m.net.toFixed(1) + ' 元/月，毛利率 ' + (m.rev > 0 ? (m.net / m.rev * 100).toFixed(0) : 0) +
+      '%。</strong>所有付费档单人成本都低于月费，说明定价扛得住"用户真把额度用完"的最坏情况。';
+  }
+}
+
+/* ---------- 预设 ---------- */
+function set(id, v){ $(id).value = v; }
+function preset(kind){
+  if (kind === 'A'){ set('fU',40); set('sU',40); set('pU',80); set('fN',20); set('sN',15); set('pN',3);
+    $('o1').checked = $('o2').checked = $('o3').checked = $('o4').checked = true; set('archRatio',1.0); }
+  if (kind === 'B'){ set('fU',100); set('sU',100); set('pU',100); }
+  if (kind === 'C'){ $('o1').checked = $('o2').checked = $('o3').checked = $('o4').checked = false;
+    set('archRatio',3.0); set('fU',100); set('sU',100); set('pU',100); }
+  if (kind === 'D'){ set('fN',10); set('sN',7); set('pN',1); set('fU',40); set('sU',40); set('pU',80);
+    $('o1').checked = $('o2').checked = $('o3').checked = $('o4').checked = true; set('archRatio',1.0); }
+  render();
+}
+
+['input','change'].forEach(function(ev){
+  document.addEventListener(ev, function(){ render(); }, true);
+});
+$('pA').onclick = function(){ preset('A'); };
+$('pB').onclick = function(){ preset('B'); };
+$('pC').onclick = function(){ preset('C'); };
+$('pD').onclick = function(){ preset('D'); };
+render();
 </script>
 </body>
 </html>

@@ -67,21 +67,49 @@ export async function myProjects() {
   })
 }
 
-/** 分页拉取照片 */
-export async function getPhotos(projectId: string, modelId: string, skip: number, limit = 18) {
-  return callSafe<{ photos: ClientPhoto[]; hasMore: boolean; locked: boolean; packageCount: number }>(
-    'selection',
-    { action: 'getPhotos', projectId, modelId, skip, limit }
-  )
+export interface PhotoItem extends ClientPhoto {
+  /** true = 端上已有有效缓存，服务端没生成链接 */
+  cached?: boolean
 }
 
-/** 单张大图临时链接 */
-export async function getPreviewUrl(projectId: string, modelId: string, photoId: string) {
-  return callSafe<{ photoId: string; filename: string; previewUrl: string }>('selection', {
+/** 分页拉取照片。have = 端上已缓存的 photoId，服务端跳过这些不再取临时链接 */
+export async function getPhotos(
+  projectId: string,
+  modelId: string,
+  skip: number,
+  limit = 18,
+  have: string[] = []
+) {
+  return callSafe<{
+    photos: PhotoItem[]
+    hasMore: boolean
+    locked: boolean
+    packageCount: number
+    archived: boolean
+  }>('selection', { action: 'getPhotos', projectId, modelId, skip, limit, have })
+}
+
+/**
+ * 大图临时链接
+ * range = 2 时一次返回当前张 + 前后各 2 张，滑动连看不再每张一次调用
+ */
+export async function getPreviewUrl(
+  projectId: string,
+  modelId: string,
+  photoId: string,
+  range = 2
+) {
+  return callSafe<{
+    photoId: string
+    filename: string
+    previewUrl: string
+    list: { photoId: string; filename: string; previewUrl: string }[]
+  }>('selection', {
     action: 'getPreview',
     projectId,
     modelId,
     photoId,
+    range,
   })
 }
 

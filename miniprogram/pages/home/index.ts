@@ -87,7 +87,10 @@ Page({
       const submitted = models.filter((m) => m.status === '已提交').length
       let status = '待选片'
       let statusClass = ''
-      if (expired) {
+      if (p.status === 'ARCHIVED') {
+        status = '已归档'
+        statusClass = 'grey'
+      } else if (expired) {
         status = '已过期'
         statusClass = 'red'
       } else if (models.length && submitted === models.length) {

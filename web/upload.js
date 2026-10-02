@@ -14,13 +14,21 @@
 const CFG_KEY = 'photo_selection_env_id'
 const DEFAULT_ENV = 'cloud1-d2guu7uw1a306815a' // 云开发环境 ID（与 miniprogram/env.ts 一致）
 const WX_APPID = 'wxe950960fdf45e0b5' // 小程序 AppID，微信 Web SDK 必传
-const THUMB_LONG_EDGE = 480
-const THUMB_QUALITY = 0.75
+// 缩略图只用于网格列表（手机上单格不到 120px 物理宽），320 长边足够，体积比 480 小 40%
+const THUMB_LONG_EDGE = 320
+const THUMB_QUALITY = 0.7
 const CONCURRENCY = 3
 
+/**
+ * 画质四档。默认 standard = 1600 / 0.75 —— 单条最大的成本杠杆
+ * 单位体积比约为 标准 1 : 高清 2.2 : 高清Pro 4.8 : 原画质 8.8
+ * 原画质不要开到 q95：2.8MB/张时 500 张的项目模特端要下 560MB，模特的手机先崩
+ */
 const PRESETS = {
-  standard: { longEdge: 2048, quality: 0.82 },
-  hd: { longEdge: 2880, quality: 0.9 },
+  standard: { longEdge: 1600, quality: 0.75 },
+  hd: { longEdge: 2048, quality: 0.82 },
+  hdpro: { longEdge: 2880, quality: 0.9 },
+  raw: { longEdge: 4096, quality: 0.92 },
 }
 
 let app = null

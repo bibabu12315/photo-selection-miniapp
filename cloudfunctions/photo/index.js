@@ -146,6 +146,17 @@ async function registerPhoto(ev) {
   if (exist.data && exist.data.length > 0) {
     const id = exist.data[0]._id
     await db.collection('photo').doc(id).update({ data: base })
+    // 重传可能换过画质档，按差值调整项目在线额度
+    const old = exist.data[0]
+    const delta =
+      (parseInt(previewBytes, 10) || 0) +
+      (parseInt(thumbBytes, 10) || 0) -
+      ((parseInt(old.previewBytes, 10) || 0) + (parseInt(old.thumbBytes, 10) || 0))
+    if (delta) {
+      await db.collection('project').doc(projectId).update({
+        data: { usedBytes: _.inc(delta), updatedAt: now },
+      })
+    }
     return { ok: true, data: { photoId: id, updated: true } }
   }
 
@@ -159,7 +170,9 @@ async function registerPhoto(ev) {
   })
 
   // 项目封面：取前 3 张缩略图，供模特端「我的拍摄」列表显示
-  const updateData = { photoCount: _.inc(1), updatedAt: now }
+  // usedBytes = 在线额度计量（preview + thumb），归档时会扣掉 preview 部分
+  const bytes = (parseInt(previewBytes, 10) || 0) + (parseInt(thumbBytes, 10) || 0)
+  const updateData = { photoCount: _.inc(1), usedBytes: _.inc(bytes), updatedAt: now }
   if (p.status === 'DRAFT') updateData.status = 'UPLOADING'
   if ((p.coverThumbs || []).length < 3) updateData.coverThumbs = _.push([thumbFileID])
   await db.collection('project').doc(projectId).update({ data: updateData })

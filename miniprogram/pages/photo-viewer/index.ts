@@ -1,4 +1,5 @@
 import { getPreviewUrl } from '../../services/selection'
+import { getCached, putBatch } from '../../services/urlcache'
 
 /**
  * 模特端 · 大图浏览（WXS 手势驱动版）
@@ -35,7 +36,8 @@ Page({
 
   projectId: '',
   modelId: '',
-  cache: {} as Record<string, string>,
+  /** 已发出但未返回的请求，避免同一张重复请求 */
+  pending: {} as Record<string, boolean>,
   channel: null as any,
   tapTimer: 0 as any,
   hintTimer: 0 as any,
@@ -114,22 +116,60 @@ Page({
     }
   },
 
-  /** 加载 index 及前后各一张的 preview 大图，滑动切换时不闪缩略图 */
+  /**
+   * 加载 index 前后共 5 张的 preview 大图，滑动切换时不闪缩略图
+   * 一次请求拿 5 张（range=2）：连滑 20 张只产生约 4~5 次调用，而不是 20 次
+   * 端上缓存命中则完全不请求（云端链接 24h 有效，本地缓存 20h）
+   */
   loadAround(this: any, index: number) {
-    ;[index - 1, index, index + 1].forEach((i) => {
+    const span = [index - 2, index - 1, index, index + 1, index + 2]
+    const missing: number[] = []
+    const patch: Record<string, string> = {}
+
+    span.forEach((i) => {
       const p = this.data.photos[i]
       if (!p) return
-      if (this.cache[p._id]) {
-        this.setData({ [`previewUrls[${i}]`]: this.cache[p._id] })
+      const cached = getCached(this.projectId, 'preview', p._id)
+      if (cached) {
+        if (this.data.previewUrls[i] !== cached) patch[`previewUrls[${i}]`] = cached
         return
       }
-      getPreviewUrl(this.projectId, this.modelId, p._id).then((res) => {
-        if (res.ok && res.data && res.data.previewUrl) {
-          this.cache[p._id] = res.data.previewUrl
-          this.setData({ [`previewUrls[${i}]`]: res.data.previewUrl })
+      if (!this.data.previewUrls[i]) missing.push(i)
+    })
+    if (Object.keys(patch).length) this.setData(patch)
+    if (!missing.length) return
+
+    // 以离当前张最近的缺失项为中心请求一次
+    const center = missing.reduce(
+      (a, b) => (Math.abs(b - index) < Math.abs(a - index) ? b : a),
+      missing[0]
+    )
+    const target = this.data.photos[center]
+    if (!target || this.pending[target._id]) return
+    this.pending[target._id] = true
+
+    getPreviewUrl(this.projectId, this.modelId, target._id, 2).then((res) => {
+      this.pending[target._id] = false
+      if (!res.ok || !res.data) {
+        // 已归档 / 失败：静默回退显示缩略图，只在明确归档时提示一次
+        if (res.error && /归档/.test(res.error)) {
+          ;(wx as any).showToast({ title: res.error, icon: 'none', duration: 2500 })
         }
-        // 失败时静默：WXML 回退显示缩略图
+        return
+      }
+      const list = res.data.list || []
+      putBatch(
+        this.projectId,
+        'preview',
+        list.filter((x) => x.previewUrl).map((x) => ({ photoId: x.photoId, url: x.previewUrl }))
+      )
+      const next: Record<string, string> = {}
+      list.forEach((item) => {
+        if (!item.previewUrl) return
+        const i = this.data.photos.findIndex((q: any) => q._id === item.photoId)
+        if (i >= 0) next[`previewUrls[${i}]`] = item.previewUrl
       })
+      if (Object.keys(next).length) this.setData(next)
     })
   },
 })
