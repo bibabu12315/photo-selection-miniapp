@@ -1,6 +1,6 @@
 import { waitForSession } from '../../utils/auth'
 import { myProjects, MyProjectItem } from '../../services/selection'
-import { shootText, expireText, packageText } from '../../utils/format'
+import { shootText, expireText, daysLeft, packageText } from '../../utils/format'
 
 /**
  * 模特端 · 我的拍摄
@@ -15,6 +15,11 @@ interface ItemVM extends MyProjectItem {
   meta: string
   selectText: string
   locked: boolean
+  /** 「剩 X 天」，≤7 天标橙（C-1 / E-4） */
+  remainText: string
+  remainClass: string
+  /** 已选进度百分比，0 = 不展示进度条 */
+  progress: number
 }
 
 Page({
@@ -69,16 +74,28 @@ Page({
       }
 
       const pkg = packageText(it.packageCount)
+      // 剩余天数单独成一个 chip：≤7 天标橙提醒（到期照片真会没，属止损提示）
+      const d = daysLeft(it.expireAt)
+      const remainText = it.expired ? '已过期' : `剩 ${d} 天`
+      const remainClass = it.expired ? 'red' : d >= 0 && d <= 7 ? 'amber' : ''
+
+      // 进度：有套餐上限按上限算，否则按总张数算；都没有就不画进度条
+      const base = it.packageCount > 0 ? it.packageCount : it.photoCount
+      const progress = base > 0 ? Math.min(100, Math.round((it.selectedCount / base) * 100)) : 0
+
       return Object.assign({}, it, {
         status,
         statusClass,
         shoot: shootText(it.shootDate),
-        meta: `${it.photoCount} 张 · ${expireText(it.expireAt)}`,
+        meta: `${it.photoCount} 张`,
         selectText: it.locked
           ? `已选 ${it.selectedCount} 张`
           : it.selectedCount > 0
           ? `已选 ${it.selectedCount} / ${pkg}`
           : '还没开始',
+        remainText,
+        remainClass,
+        progress,
       })
     })
 
@@ -95,5 +112,10 @@ Page({
     ;(wx as any).navigateTo({
       url: `/pages/client-select/index?pid=${item.projectId}&mid=${item.modelId}`,
     })
+  },
+
+  /** E-3：空态的下一步——摄影师发来的链接可以在这里直接打开 */
+  goGuide(this: any) {
+    ;(wx as any).navigateTo({ url: '/pages/guide/index' })
   },
 })

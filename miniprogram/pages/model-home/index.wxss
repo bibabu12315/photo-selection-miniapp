@@ -38,6 +38,34 @@
   margin-top: 6rpx;
 }
 
+/* 历史回看说明：说清看的是预览图，别让她以为能拿回原图（BR-306） */
+.tip {
+  font-size: 22rpx;
+  color: #6f6f6f;
+  line-height: 1.7;
+  padding: 0 8rpx 20rpx;
+}
+
+/* 两个 chip 并排时留缝，别粘在一起 */
+.row .chip + .chip {
+  margin-left: 8rpx;
+}
+
+/* 已选进度条：一眼看出「选了多少 / 还要选多少」 */
+.pbar {
+  height: 6rpx;
+  margin-top: 18rpx;
+  border-radius: 999rpx;
+  background: #2e2e2e;
+  overflow: hidden;
+}
+
+.pbar-in {
+  height: 100%;
+  border-radius: 999rpx;
+  background: #4caf7d;
+}
+
 .covers {
   display: flex;
   gap: 8rpx;

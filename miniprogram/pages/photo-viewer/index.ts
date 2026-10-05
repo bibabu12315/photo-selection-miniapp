@@ -32,6 +32,12 @@ Page({
     windowW: 0,
     windowH: 0,
     zoomed: false,
+    /** 下标 → 加载完成样式：anim=淡入 / fast=缓存命中直接显示（F-22） */
+    loaded: {} as Record<number, string>,
+    /** 下标 → 是否加载失败，失败才显示重试块 */
+    failed: {} as Record<number, boolean>,
+    /** 上级没把照片传过来（或迟迟不来），整页落错误态 */
+    loadError: false,
   },
 
   projectId: '',
@@ -41,24 +47,45 @@ Page({
   channel: null as any,
   tapTimer: 0 as any,
   hintTimer: 0 as any,
+  /** 本批 <image> 开始渲染的时刻，用于判断 bindload 是不是缓存命中 */
+  loadT0: 0,
+  /** 等待上级页面 init 的超时兜底 */
+  initTimer: 0 as any,
 
   onLoad(this: any) {
     const ch = this.getOpenerEventChannel && this.getOpenerEventChannel()
-    if (!ch || !ch.on) return
+    if (!ch || !ch.on) {
+      // 拿不到 eventChannel（异常路径），别让用户永远停在「加载中…」
+      this.setData({ loadError: true })
+      return
+    }
+    // 上级 5 秒内没 push 数据就直接落错误态，不给无限加载中
+    if (this.initTimer) clearTimeout(this.initTimer)
+    this.initTimer = setTimeout(() => {
+      if (!this.data.ready) this.setData({ loadError: true })
+    }, 5000)
+
     this.channel = ch
     ch.on('init', (payload: any) => {
+      if (this.initTimer) {
+        clearTimeout(this.initTimer)
+        this.initTimer = 0
+      }
       const info = (wx as any).getSystemInfoSync()
       this.projectId = payload.projectId
       this.modelId = payload.modelId
       const photos: ViewerPhoto[] = payload.photos || []
       this.setData({
-        ready: true,
+        ready: photos.length > 0,
+        loadError: photos.length === 0,
         photos,
         current: Math.min(payload.index || 0, Math.max(0, photos.length - 1)),
         locked: !!payload.locked,
         windowW: info.windowWidth,
         windowH: info.windowHeight,
       })
+      if (!photos.length) return
+      this.loadT0 = Date.now()
       this.loadAround(this.data.current)
       this.setData({ showGestureHint: true })
       if (this.hintTimer) clearTimeout(this.hintTimer)
@@ -71,6 +98,71 @@ Page({
   onUnload(this: any) {
     if (this.hintTimer) clearTimeout(this.hintTimer)
     if (this.tapTimer) clearTimeout(this.tapTimer)
+    if (this.initTimer) clearTimeout(this.initTimer)
+  },
+
+  /** 单张加载完成：100ms 内回来的当作缓存命中直接显示，其余淡入 */
+  onImgLoad(this: any, e: any) {
+    const index = Number(e.currentTarget.dataset.index)
+    if (this.data.loaded[index]) return
+    const cls = Date.now() - this.loadT0 < 100 ? 'fast' : 'anim'
+    // 动态 key 一律先建空对象再下标赋值：对象计算属性 { [k]: v } 会被降级编译成
+    // @babel/runtime/helpers/toPropertyKey，本项目无 node_modules → 页面加载即白屏
+    const patch: any = {}
+    patch['loaded[' + index + ']'] = cls
+    patch['failed[' + index + ']'] = false
+    this.setData(patch)
+  },
+
+  /** 单张加载失败：显示就地重试块 */
+  onImgError(this: any, e: any) {
+    const index = Number(e.currentTarget.dataset.index)
+    const patch: any = {}
+    patch['failed[' + index + ']'] = true
+    this.setData(patch)
+  },
+
+  /** WXS 手势与业务逻辑互不干扰：失败块的触摸在此处吞掉 */
+  noop() {},
+
+  goBack(this: any) {
+    ;(wx as any).navigateBack({ fail: () => {} })
+  },
+
+  /** 重试单张：重新取一次大图链接（原链接可能已过期） */
+  async retryImg(this: any, e: any) {
+    const index = Number(e.currentTarget.dataset.index)
+    const p = this.data.photos[index]
+    if (!p) return
+    const reset: any = {}
+    reset['failed[' + index + ']'] = false
+    reset['loaded[' + index + ']'] = ''
+    this.setData(reset)
+    const res = await getPreviewUrl(this.projectId, this.modelId, p._id, 0)
+    const url = res.ok && res.data ? res.data.previewUrl : ''
+    if (!url) {
+      const archived = !!(res.error && /归档/.test(res.error))
+      ;(wx as any).showToast({
+        title: archived ? res.error : '重试失败，请稍后再试',
+        icon: 'none',
+        duration: 2500,
+      })
+      const fail: any = {}
+      fail['failed[' + index + ']'] = true
+      this.setData(fail)
+      return
+    }
+    putBatch(this.projectId, 'preview', [{ photoId: p._id, url }])
+    this.loadT0 = Date.now()
+    // <image> 只有 src 变了才会重新加载：先把 src 清掉，渲染落地后再填新链接
+    const clear: any = {}
+    clear['previewUrls[' + index + ']'] = ''
+    this.setData(clear, () => {
+      const fill: any = {}
+      fill['previewUrls[' + index + ']'] = url
+      this.setData(fill)
+    })
+    this.pending[p._id] = false
   },
 
   /** WXS 回调：翻页完成，加载新页及相邻页的大图 */
@@ -105,7 +197,9 @@ Page({
     const p = this.data.photos[i]
     if (!p) return
     const selected = !p.selected
-    this.setData({ [`photos[${i}].selected`]: selected })
+    const patch: any = {}
+    patch['photos[' + i + '].selected'] = selected
+    this.setData(patch)
     try {
       ;(wx as any).vibrateShort({ type: 'light' })
     } catch (e) {

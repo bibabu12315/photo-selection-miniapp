@@ -8,12 +8,17 @@
     <view class="retry" bindtap="load">点此重试</view>
   </view>
 
+  <!-- E-3：空态给下一步——已经拿到链接的人可以直接在这里打开 -->
   <view wx:elif="{{items.length === 0}}" class="empty">
     还没有拍摄项目
-    <view class="empty-sub">请从摄影师发给你的链接或二维码进入，之后这里会自动出现</view>
+    <view class="empty-sub">摄影师把链接或二维码发给你后，这里会自动出现</view>
+    <view class="retry" bindtap="goGuide">我有邀请链接 ›</view>
   </view>
 
   <block wx:else>
+    <!-- 历史回看说明（BR-306 原图不上云；窗口 = 项目存续期） -->
+    <view class="tip">这里看到的是云端预览图，仅在项目存续期内可查看</view>
+
     <view
       class="card"
       wx:for="{{items}}"
@@ -24,9 +29,14 @@
       <view class="row">
         <view class="name">{{item.name}}</view>
         <view class="chip {{item.statusClass}}">{{item.status}}</view>
+        <view class="chip {{item.remainClass}}">{{item.remainText}}</view>
       </view>
       <view class="meta">{{item.shoot}}</view>
       <view class="meta">{{item.meta}} · {{item.selectText}}</view>
+
+      <view class="pbar" wx:if="{{item.progress > 0}}">
+        <view class="pbar-in" style="width: {{item.progress}}%"></view>
+      </view>
 
       <view class="covers" wx:if="{{item.coverUrls.length > 0}}">
         <image

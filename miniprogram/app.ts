@@ -1,6 +1,19 @@
 import { ENV_ID } from './env'
 import { whoami } from './services/selection'
 
+/**
+ * 是否输出调试日志。正式版（envType = release）静默。
+ * 目的：① 发布前「无调试残留」检查；② 不要把 openid 打到正式版真机日志里。
+ */
+const IS_DEV = (() => {
+  try {
+    const info: any = (wx as any).getAccountInfoSync()
+    return (info && info.miniProgram && info.miniProgram.envType) !== 'release'
+  } catch (e) {
+    return false
+  }
+})()
+
 App({
   globalData: {
     /** 当前用户 openid */
@@ -26,7 +39,7 @@ App({
       env: ENV_ID,
       traceUser: true,
     })
-    console.log('[app] cloudbase 初始化完成，env =', ENV_ID)
+    if (IS_DEV) console.log('[app] cloudbase 初始化完成，env =', ENV_ID)
     this.fetchIdentity()
   },
 
@@ -47,14 +60,15 @@ App({
       this.globalData.isModel = !!d.isModel
       this.globalData.displayName = d.displayName || ''
       this.globalData.loginReady = true
-      console.log(
-        '[app] openid =',
-        d.openid,
-        'isAdmin =',
-        d.isAdmin,
-        'isModel =',
-        d.isModel
-      )
+      if (IS_DEV)
+        console.log(
+          '[app] openid =',
+          d.openid,
+          'isAdmin =',
+          d.isAdmin,
+          'isModel =',
+          d.isModel
+        )
     } catch (err) {
       console.error('[app] 调用 selection 云函数失败，请确认已上传并部署', err)
     }

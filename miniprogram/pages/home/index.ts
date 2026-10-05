@@ -1,7 +1,8 @@
 import { waitForSession } from '../../utils/auth'
-import { listProjects } from '../../services/project'
+import { listProjects, extendProject } from '../../services/project'
 import { expireText, packageText, shootText, daysLeft } from '../../utils/format'
 import { Project } from '../../types'
+import { UPLOAD_PAGE_URL } from '../../env'
 
 /**
  * 摄影师端 · 我的项目
@@ -16,6 +17,13 @@ interface ProjectVM {
   statusClass: string
   modelsLine: string
   expired: boolean
+  /** 「剩 X 天」，≤3 天标红、≤7 天标橙（B-2 / E-4） */
+  remainText: string
+  remainClass: string
+  /** E-4：快到期 / 已过期 / 已归档时，卡片上直接给续期入口（到期照片真会没，这是止损） */
+  extendable: boolean
+  /** 模特提交进度百分比，0 = 不展示进度条 */
+  progress: number
 }
 
 Page({
@@ -101,12 +109,24 @@ Page({
         statusClass = 'amber'
       }
 
+      const d = daysLeft(p.expireAt)
+      const remainText = expired ? '已过期' : `剩 ${d} 天`
+      // E-4：剩 3 天红、剩 7 天橙（红 = 真的快没了，橙 = 该安排续期了）
+      const remainClass = expired || d <= 3 ? 'red' : d <= 7 ? 'amber' : ''
+      const extendable = expired || d <= 7 || p.status === 'ARCHIVED'
+      // 进度 = 已提交模特 / 总模特；没邀请模特就没有可衡量的进度，不画条
+      const progress = models.length ? Math.round((submitted / models.length) * 100) : 0
+
       return {
         _id: p._id as string,
         name: p.name,
         meta: `${shootText(p.shootDate)} · ${p.photoCount || 0} 张 · ${expireText(p.expireAt)}`,
         status,
         statusClass,
+        remainText,
+        remainClass,
+        extendable,
+        progress,
         modelsLine: models.length
           ? models
               .map(
@@ -122,13 +142,44 @@ Page({
     this.setData({ projects })
   },
 
-  goCreate(this: any) {
-    ;(wx as any).navigateTo({ url: '/pages/project-create/index' })
+  /** 复制控制台地址：手机上只做补充，新建/上传/导出都在电脑端（P-M1 改动 4） */
+  copyConsoleUrl(this: any) {
+    ;(wx as any).setClipboardData({
+      data: UPLOAD_PAGE_URL,
+      success: () => {
+        ;(wx as any).showToast({ title: '已复制，在电脑浏览器打开', icon: 'none' })
+      },
+    })
   },
 
   openProject(this: any, e: any) {
     ;(wx as any).navigateTo({
       url: `/pages/project-detail/index?id=${e.currentTarget.dataset.id}`,
+    })
+  },
+
+  /** E-4：卡片上直接续期 30 天（复用已有 project.extend，不用先进详情页） */
+  tapExtend(this: any, e: any) {
+    const id = e.currentTarget.dataset.id
+    if (!id) return
+    const it = this.data.projects.find((p: ProjectVM) => p._id === id)
+    ;(wx as any).showModal({
+      title: '延期 30 天？',
+      content:
+        it && it.expired
+          ? '项目已过期，模特现在进不去选片；延期后立刻恢复 30 天。'
+          : '给模特多留 30 天选片时间，照片不会丢。',
+      confirmText: '延期',
+      success: async (r: any) => {
+        if (!r.confirm) return
+        const res = await extendProject(id)
+        if (!res.ok) {
+          ;(wx as any).showModal({ title: '延期失败', content: res.error || '', showCancel: false })
+          return
+        }
+        ;(wx as any).showToast({ title: '已延期 30 天', icon: 'success' })
+        await this.loadProjects()
+      },
     })
   },
 })

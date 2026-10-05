@@ -36,3 +36,10 @@ export const PRESET_SIZE_MB: Record<string, number> = {
  */
 export const UPLOAD_PAGE_URL = 'https://cloud1-d2guu7uw1a306815a-1499127316.tcloudbaseapp.com/index.html'
 
+/**
+ * 订阅消息模板 ID（「用户加入任务提醒」，一次性订阅）
+ * 字段对应：thing1=用户(模特名) thing2=任务名称(项目名) time3=时间
+ * 云函数侧的同名配置在云开发控制台环境变量里，改模板时两处都要改
+ */
+export const SUBSCRIBE_TPL_ID = 'Ftb4YWeLOPWm69U0p7ucsKOVXOOGdd_lU9cU0fNRXoY'
+

@@ -17,6 +17,59 @@
   margin-top: 8rpx;
 }
 
+/* 状态进度条（B-3）：四步派生展示，不落库 */
+.steps {
+  display: flex;
+  padding: 8rpx 8rpx 24rpx;
+}
+
+.step {
+  flex: 1;
+  text-align: center;
+}
+
+.step-dot {
+  width: 44rpx;
+  height: 44rpx;
+  line-height: 44rpx;
+  margin: 0 auto 8rpx;
+  border-radius: 50%;
+  background: #ececec;
+  color: #9a9a9a;
+  font-size: 24rpx;
+}
+
+.step.done .step-dot {
+  background: #2f7d4f;
+  color: #ffffff;
+}
+
+.step-t {
+  font-size: 22rpx;
+  color: var(--muted);
+}
+
+.step.done .step-t {
+  color: #245c3c;
+}
+
+/* 照片墙入口（B-3 → B-4） */
+.wall-link {
+  margin-top: 16rpx;
+  font-size: 28rpx;
+  color: #2f7d4f;
+}
+
+.wall-link:active {
+  opacity: 0.6;
+}
+
+.wall-sub {
+  margin-left: 8rpx;
+  font-size: 22rpx;
+  color: var(--muted);
+}
+
 .tag-archived {
   display: inline-block;
   margin-left: 12rpx;

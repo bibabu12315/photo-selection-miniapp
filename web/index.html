@@ -3,11 +3,111 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>摄影选片 · 电脑上传</title>
-  <link rel="stylesheet" href="style.css">
+  <title>摄影选片 · 摄影师控制台</title>
+  <link rel="stylesheet" href="style.css?v=uw3e">
+  <link rel="stylesheet" href="console.css?v=uw3e">
+  <link rel="stylesheet" href="console-v2.css?v=uw3e">
 </head>
 <body>
-  <main class="wrap">
+  <!-- UI 2.0 骨架：data-panel 控制右侧信息栏，data-drawer 控制上传抽屉，data-lb 控制大图 -->
+  <div class="app" id="consoleShell" data-panel="on" data-drawer="closed" data-lb="off">
+
+    <!-- ======== 侧边栏（设计稿 SECTION 2~8 通用） ======== -->
+    <aside class="side">
+      <div class="side-logo">
+        <div class="side-mark"><i></i></div>
+        <div>
+          <div class="side-name">摄影选片</div>
+          <div class="side-sub">Photo Select</div>
+        </div>
+      </div>
+
+      <div class="side-group">
+        <button class="nav-item" id="navDash" data-go="#/dash">
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+          <span class="t">工作台</span>
+        </button>
+        <button class="nav-item" id="navProjects" data-go="#/projects">
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M2 6.5h12M6 3v10"/></svg>
+          <span class="t">项目</span><span class="cnt" id="navProjCnt"></span>
+        </button>
+      </div>
+
+      <div class="side-group side-recent">
+        <div class="side-label">最近项目</div>
+        <div id="recentList"></div>
+      </div>
+
+      <div class="side-group">
+        <div class="side-label">&nbsp;</div>
+        <button class="nav-item" id="navSettings" data-go="#/projects">
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="2.4"/><path d="M8 1.6v2M8 12.4v2M1.6 8h2M12.4 8h2"/></svg>
+          <span class="t">设置</span>
+        </button>
+      </div>
+
+      <div class="side-foot">
+        <div class="user">
+          <div class="avatar">摄</div>
+          <div>
+            <div class="user-name">摄影师</div>
+            <div class="user-role">已登录</div>
+          </div>
+        </div>
+        <button class="ghost" id="btnLogout"><span>退出登录</span></button>
+      </div>
+    </aside>
+
+    <!-- ======== 主区 ======== -->
+    <div class="main">
+      <!-- 登录页 -->
+      <div class="login-wrap hidden" id="loginView">
+        <div class="login-card">
+          <div style="display:flex;align-items:center;justify-content:center;margin-bottom:24px">
+            <div class="side-mark" style="width:36px;height:36px;flex:0 0 36px;border-radius:9px"><i style="width:16px;height:16px"></i></div>
+          </div>
+          <div class="login-t">摄影选片</div>
+          <div class="login-s">摄影师工作台 · 微信扫码登录</div>
+
+          <div class="qr-box">
+            <div class="qr-inner">
+              <img id="qrImg" class="hidden" alt="登录二维码" style="position:absolute;inset:0;width:100%;height:100%">
+              <div class="qr-cover hidden" id="qrLoading"><div class="lg-skeleton"></div></div>
+              <div class="qr-cover hidden" id="qrError">
+                <div id="qrErrorText">二维码生成失败</div>
+                <button class="btn btn-sec btn-sm" id="btnQrRetry">重试</button>
+              </div>
+              <div class="qr-cover hidden" id="qrExpired">
+                <div>二维码已过期</div>
+                <button class="btn btn-sec btn-sm" id="btnRefreshQr">刷新二维码</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="login-hint" id="qrHint">请用微信扫一扫<div class="exp">二维码 5 分钟内有效，过期将自动刷新</div></div>
+          <div class="login-state" id="loginState"></div>
+          <div class="login-foot">扫码后自动绑定摄影师身份<br>手机端选片请用微信小程序</div>
+        </div>
+      </div>
+
+      <!-- 各业务页面（由 console.js 渲染） -->
+      <div class="view" id="consoleMain"></div>
+    </div>
+
+    <!-- ======== 上传抽屉 / 迷你条（SECTION 6） ======== -->
+    <div class="scrim" id="upScrim"></div>
+    <div class="drawer" id="upDrawer"></div>
+    <div class="mini-bar" id="upMin"></div>
+
+    <!-- ======== 大图预览（SECTION 7） ======== -->
+    <div class="lb" id="pwLightbox"></div>
+
+    <!-- ======== 轻提示 ======== -->
+    <div class="toast" id="pdToast"></div>
+  </div>
+
+  <!-- 旧三步上传向导：# /upload 兜底入口 -->
+  <main class="wrap hidden" id="legacyApp">
     <header class="head">
       <div class="brand">摄影选片 · 电脑上传</div>
       <div class="steps" id="steps">
@@ -118,7 +218,59 @@
     </section>
   </main>
 
+  <!-- 新建项目弹窗（T-P1-3） -->
+  <div class="cs-modal hidden" id="createModal">
+    <div class="cs-modal-card">
+      <h3 class="cs-modal-title">新建项目</h3>
+
+      <label class="cs-field">
+        <span>项目名称（必填）</span>
+        <input id="npName" type="text" maxlength="30" placeholder="如：小红 3 月写真">
+      </label>
+
+      <label class="cs-field">
+        <span>套餐张数上限（0 = 不限）</span>
+        <input id="npCount" type="number" min="0" max="999" step="1" value="0">
+      </label>
+
+      <label class="cs-field">
+        <span>存续天数（1~365，到期后自动清理大图）</span>
+        <input id="npDays" type="number" min="1" max="365" step="1" value="30">
+      </label>
+
+      <p class="cs-err" id="npErr"></p>
+
+      <div class="cs-modal-row">
+        <button class="cs-btn" id="npCancel">取消</button>
+        <button class="btn btn-pri" id="npSubmit">创建</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 邀请模特弹窗（T-P1-6） -->
+  <div class="cs-modal hidden" id="inviteModal">
+    <div class="cs-modal-card">
+      <h3 class="cs-modal-title">邀请模特</h3>
+
+      <label class="cs-field">
+        <span>模特名字（备注用，如「小王」）</span>
+        <input id="ivName" type="text" maxlength="20" placeholder="她是谁？这个名字只有你看得到">
+      </label>
+
+      <p class="cs-err" id="ivErr"></p>
+
+      <div class="cs-modal-row">
+        <button class="cs-btn" id="ivCancel">取消</button>
+        <button class="btn btn-pri" id="ivSubmit">生成邀请</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://web-9gikcbug35bad3a8-1304825656.tcloudbaseapp.com/sdk/1.4.0/cloud.js"></script>
-  <script src="upload.js"></script>
+  <script src="upload.js?v=uw3e"></script>
+  <script src="session.js?v=uw3e"></script>
+  <script src="uploader.js?v=uw3e"></script>
+  <script src="quality.js?v=uw3e"></script>
+  <script src="console.js?v=uw3e"></script>
 </body>
 </html>

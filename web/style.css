@@ -1,15 +1,39 @@
+/* 设计 token（54 文档第 1 节 · 与设计稿 spec.html 一致，三端同值） */
 :root {
-  --fg: #1a1a1a;
-  --fg2: #4a4a4a;
-  --muted: #8a8a8a;
-  --line: #e8e8e8;
-  --line2: #d8d8d8;
-  --page: #fafafa;
-  --chip: #f2f2f2;
-  --ok: #1d9e75;
-  --ok-bg: #e1f5ee;
-  --err: #e24b4a;
-  --err-bg: #fcebeb;
+  --fg: #1a1a18;
+  --fg2: #55544e;
+  --muted: #8a897f;
+  --page: #f4f4f2;
+  --panel: #ffffff;
+  --line: #e5e4df;
+  --line2: #d8d7d0;
+
+  /* 照片区深底（新）：不是纯黑，留一点暖灰 */
+  --dark: #1c1c1a;
+  --dark2: #262624;
+  --dark-line: #3a3a36;
+
+  --ok: #2f7d4f;
+  --warn: #9a6b00;
+  --info: #3a5fa8;
+  --err: #b03a32;
+
+  /* 圆角：卡片 14 / 控件 8 / 徽标全圆 */
+  --r-card: 14px;
+  --r-ctl: 8px;
+  --r-pill: 999px;
+
+  /* 旧名保留：现有样式仍引用，值统一对齐上面这套 */
+  --bg: #ffffff;
+  --chip: #f2f2f0;
+  --ok-bg: #e4f0e8;
+  --err-bg: #fbedeb;
+  --amber: var(--warn);
+  --amber-bg: #f7efdc;
+  --green: var(--ok);
+  --green-bg: var(--ok-bg);
+  --red: var(--err);
+  --red-bg: var(--err-bg);
 }
 
 * {

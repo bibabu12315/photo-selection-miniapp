@@ -1,0 +1,1459 @@
+/* 摄影师控制台样式（V2.0 T-P1-1 起）
+   配色沿用 style.css 的变量；类名统一 cs- / lg- 前缀，避免与旧向导冲突
+
+   ⚠ UI 2.0 迁移后：本文件只保留「几个页面共用的老控件」 ——
+     .hidden / .cs-btn / .cs-modal* / .cs-field / .cs-err / .cs-sub
+     .qt-* .qv-*（画质对比弹窗，quality.js）/ .up-opt（弹窗里的下拉）/ .up-done-t/.up-done-d
+     .lg-skeleton / .lg-state（登录）/ .rs-note（quality.js 里的注释行）
+   控制台各页面（工作台 / 项目 / 详情照片墙 / 上传抽屉 / 大图 / 结果页）
+   已全部迁到 console-v2.css，这里的 cs-proj-* / pd-* / pw-* / up-drawer / rs-* 等规则是死代码，
+   留着不影响表现（DOM 里已不存在这些类名），后续一次性删除即可。 */
+
+/* ---------- 通用 ---------- */
+
+.hidden {
+  display: none !important;
+}
+
+/* ---------- A-1 骨架：左侧栏 + 右侧内容区 ---------- */
+
+#consoleShell {
+  display: flex;
+  align-items: stretch;
+  min-height: 100vh;
+}
+
+.cs-side {
+  flex: 0 0 200px;
+  width: 200px;
+  border-right: 1px solid var(--line);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0 16px;
+}
+
+/* 登录页（body.solo）不显示侧边栏 */
+body.solo .cs-side {
+  display: none;
+}
+
+.cs-side-brand {
+  padding: 0 20px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.cs-side-brand small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.cs-nav {
+  flex: 1;
+}
+
+.cs-nav-item {
+  display: block;
+  padding: 9px 20px;
+  font-size: 14px;
+  color: var(--fg2);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+}
+
+.cs-nav-item:hover {
+  background: var(--page);
+  color: var(--fg);
+}
+
+.cs-nav-item.on {
+  color: var(--fg);
+  font-weight: 600;
+  background: var(--page);
+  border-left-color: var(--ok);
+}
+
+.cs-nav-item.disabled {
+  color: var(--muted);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cs-side-foot {
+  padding: 0 20px;
+}
+
+.cs-side-foot .cs-btn {
+  width: 100%;
+}
+
+.cs-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cs-topbar {
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.cs-topbar-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.cs-topbar-acts {
+  display: flex;
+  gap: 8px;
+}
+
+.cs-body {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 24px 60px;
+}
+
+.cs-panel {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.cs-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.cs-desc {
+  color: var(--muted);
+  margin: 0;
+}
+
+.cs-btn {
+  appearance: none;
+  border: 1px solid var(--line2);
+  background: #fff;
+  color: var(--fg);
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cs-btn:hover {
+  background: var(--chip);
+}
+
+/* 返回列表链接 */
+.cs-back {
+  display: inline-block;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--fg2);
+  text-decoration: none;
+  cursor: pointer;
+}
+.cs-back:hover {
+  color: var(--fg);
+  text-decoration: underline;
+}
+
+.cs-btn.primary {
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+  color: #fff;
+}
+
+.cs-btn.primary:hover {
+  background: #333;
+}
+
+.cs-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cs-err {
+  color: var(--err);
+  font-size: 12px;
+}
+
+/* ---------- 项目列表（P-W2） ---------- */
+
+.cs-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.cs-list-head .cs-title {
+  margin: 0;
+}
+
+.cs-proj {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.cs-proj:last-child {
+  border-bottom: none;
+}
+
+.cs-proj:hover .cs-proj-name {
+  color: #000;
+  text-decoration: underline;
+}
+
+.cs-proj-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cs-proj-meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cs-proj-side {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* ---------- A-3 项目列表：卡片网格 ---------- */
+
+.cs-proj-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.cs-proj-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.cs-proj-card:hover {
+  border-color: var(--line2);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.cs-proj-cover {
+  height: 120px;
+  display: flex;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.cs-proj-cover img {
+  flex: 1;
+  width: 0;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cs-proj-body {
+  padding: 12px 14px 14px;
+}
+
+.cs-proj-name {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cs-proj-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.cs-proj-remain {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.cs-proj-remain.warn {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.cs-proj-prog {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.cs-proj-prog i {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+  border-radius: 2px;
+}
+
+.cs-proj-meta {
+  font-size: 12px;
+  color: var(--fg2);
+}
+
+/* 末尾虚线「新建项目」卡 */
+.cs-proj-new {
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 180px;
+  border: 1.5px dashed var(--line2);
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.cs-proj-new:hover {
+  border-color: var(--ok);
+  color: var(--ok);
+  box-shadow: none;
+}
+
+.cs-proj-new-plus {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.cs-proj-new-tip {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.cs-kv {
+  font-size: 12px;
+  color: var(--fg2);
+}
+
+.cs-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.cs-badge.ok {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.cs-badge.amber {
+  background: #faeeda;
+  color: #ba7517;
+}
+
+.cs-badge.err {
+  background: var(--err-bg);
+  color: var(--err);
+}
+
+.cs-badge.muted {
+  background: var(--chip);
+  color: var(--muted);
+}
+
+.cs-empty {
+  text-align: center;
+  padding: 48px 20px;
+}
+
+.cs-empty .cs-btn {
+  margin-top: 16px;
+}
+
+/* ---------- 弹窗 ---------- */
+
+.cs-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.cs-modal-card {
+  width: 400px;
+  max-width: calc(100vw - 40px);
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  animation: cs-pop 0.2s ease-out;
+}
+
+@keyframes cs-pop {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+}
+
+.cs-modal-title {
+  margin: 0 0 16px;
+  font-size: 15px;
+}
+
+.cs-field {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.cs-field span {
+  display: block;
+  font-size: 12px;
+  color: var(--fg2);
+  margin-bottom: 6px;
+}
+
+.cs-field input {
+  width: 100%;
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.cs-field input:focus {
+  outline: none;
+  border-color: #1a1a1a;
+}
+
+.cs-modal-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* ---------- 登录页（P-W1） ---------- */
+
+.lg-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* ---------- A-2 登录页（只换皮，逻辑不动） ---------- */
+
+.lg-card {
+  width: 380px;
+  max-width: 100%;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 32px 28px 24px;
+  text-align: center;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.06);
+}
+
+.lg-logo {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 12px;
+  border-radius: 12px;
+  background: var(--dark);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lg-brand {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.lg-sub {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 4px 0 22px;
+}
+
+.lg-qr-box {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin: 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--page);
+}
+
+.lg-qr-box img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.lg-qr-cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--page);
+  color: var(--muted);
+  font-size: 13px;
+  padding: 16px;
+}
+
+.lg-skeleton {
+  width: 140px;
+  height: 140px;
+  border-radius: 8px;
+  background: linear-gradient(100deg, #eeeeee 40%, #f6f6f6 50%, #eeeeee 60%);
+  background-size: 200% 100%;
+  animation: lg-shine 1.2s infinite;
+}
+
+@keyframes lg-shine {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.lg-state {
+  margin: 16px 0 4px;
+  font-size: 13px;
+  color: var(--fg2);
+}
+
+.lg-state.ok {
+  color: var(--ok);
+}
+
+.lg-state.err {
+  color: var(--err);
+}
+
+.lg-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 2px 0 0;
+}
+
+.lg-note {
+  margin-top: 20px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--page);
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ---------- 项目详情页（T-P1-4） ---------- */
+
+.pd-head {
+  margin-bottom: 8px;
+}
+.pd-head-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.cs-sub {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+.cs-ov-count {
+  font-size: 13px;
+  color: var(--fg2);
+}
+
+/* 拖拽区 */
+.up-drop {
+  border: 1.5px dashed var(--line2);
+  border-radius: 10px;
+  padding: 36px 16px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--page);
+}
+.up-drop.drag {
+  border-color: var(--ok);
+  background: var(--ok-bg);
+}
+.up-drop-main {
+  font-size: 14px;
+  font-weight: 600;
+}
+.up-drop-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.up-opts {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.up-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--fg2);
+}
+.up-opt select,
+.up-opt input {
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+.up-summary {
+  font-size: 13px;
+  color: var(--fg2);
+  margin: 12px 0 0;
+}
+.up-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.up-prog {
+  height: 6px;
+  background: var(--chip);
+  border-radius: 3px;
+  margin-top: 14px;
+  overflow: hidden;
+}
+.up-prog > i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--ok);
+  transition: width 0.2s;
+}
+.up-stats {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 8px 0 0;
+}
+.up-wall {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+.up-wall img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--chip);
+  opacity: 0.45;
+}
+.up-wall img.done {
+  opacity: 1;
+  box-shadow: inset 0 0 0 2px var(--ok);
+}
+.up-wall img.failed {
+  opacity: 1;
+  box-shadow: inset 0 0 0 2px var(--err);
+}
+.up-done {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: var(--ok-bg);
+}
+.up-done-t {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ok);
+}
+.up-done-d {
+  font-size: 12px;
+  color: var(--fg2);
+  margin-top: 4px;
+}
+
+/* 详情页头部操作 */
+.pd-head-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pd-acts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cs-btn.danger {
+  color: var(--err);
+}
+.cs-btn.danger:hover {
+  background: var(--err-bg);
+}
+
+/* 模特与邀请 */
+.md-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+/* 提交进度汇总（E-7）：一眼看出还差谁 */
+.md-sum {
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: var(--page);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--fg2);
+}
+
+.md-sum b {
+  color: var(--ok);
+}
+
+.md-row {
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+}
+.md-row:first-of-type {
+  border-top: none;
+}
+.md-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.md-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+.md-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.md-ops {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.md-qr {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--page);
+  border-radius: 8px;
+}
+.md-qr-img {
+  width: 172px;
+  height: 172px;
+  display: block;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.md-qr-ops {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.md-qr-tip {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* 轻提示 */
+.pd-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+  background: rgba(26, 26, 26, 0.9);
+  color: #fff;
+  font-size: 13px;
+  padding: 10px 18px;
+  border-radius: 20px;
+  z-index: 50;
+}
+
+/* ---------- 选片结果页（T-P1-7） ---------- */
+
+.rs-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.rs-tab {
+  border: 1px solid var(--line2);
+  background: var(--page);
+  border-radius: 16px;
+  padding: 5px 14px;
+  font-size: 13px;
+  color: var(--fg2);
+  cursor: pointer;
+}
+.rs-tab.on {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+}
+.rs-sum {
+  font-size: 14px;
+  margin: 0 0 12px;
+}
+.rs-over {
+  color: var(--err);
+  font-weight: 600;
+}
+.rs-export {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.rs-note {
+  font-size: 12px;
+  color: var(--muted);
+}
+/* 结果页保持 grid 而非 columns 瀑布流：本页要按文件名升序核对（BR-803），
+   columns 是竖向填充，会把阅读顺序变成「先列后行」。且结果数据不含 width/height，
+   做不出真比例瀑布流 —— 需要后端补字段，见 43 看板 A-6 备注。 */
+.rs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.rs-cell {
+  margin: 0;
+  cursor: zoom-in;
+}
+.rs-cell img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--page);
+}
+.rs-cell figcaption {
+  font-size: 11px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  color: var(--fg2);
+  margin-top: 4px;
+  word-break: break-all;
+  line-height: 1.3;
+}
+
+/* 顶部「已确认 N 位」徽标 */
+.rs-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  background: var(--ok-bg);
+  color: var(--ok);
+  font-weight: 600;
+}
+.rs-who {
+  font-size: 11px;
+  color: var(--muted);
+}
+.rs-list {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.rs-list summary {
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.rs-pre {
+  margin: 10px 0 0;
+  padding: 12px;
+  background: var(--page);
+  border-radius: 8px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ---------- 画质预览对比（T-P1-5） ---------- */
+
+.qt-zoom-ops {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+}
+.qt-zoom-now {
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 56px;
+}
+
+.qt-duo {
+  display: flex;
+  gap: 10px;
+}
+.qt-duo .qv {
+  position: relative;
+  flex: 1;
+  height: 440px;
+  overflow: hidden;
+  background: #101010;
+  border-radius: 8px;
+  cursor: grab;
+}
+.qt-duo .qv.grabbing {
+  cursor: grabbing;
+}
+.qv-img {
+  position: absolute;
+  display: block;
+  max-width: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.qv-tag {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* 缩放按钮选中态 */
+.cs-btn.on {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+}
+
+/* ---------- A-4 项目详情：左照片墙 + 右信息栏 ---------- */
+
+.pd-grid {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.pd-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.pd-side {
+  flex: 0 0 300px;
+  width: 300px;
+}
+
+.pd-side-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.pd-side .cs-proj-meta {
+  margin: 0 0 2px;
+}
+
+.pd-side-btn {
+  display: block;
+  margin-top: 12px;
+  text-align: center;
+  text-decoration: none;
+  line-height: 1.6;
+}
+
+/* 深色画布 · 照片墙 */
+.pd-wall {
+  background: var(--dark);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.pw-bar {
+  color: #fff;
+}
+
+.pw-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pw-tab {
+  appearance: none;
+  border: 1px solid var(--dark-line);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.65);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.pw-tab:hover {
+  color: #fff;
+}
+
+.pw-tab.on {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+  font-weight: 600;
+}
+
+.pw-search {
+  flex: 1;
+  min-width: 160px;
+  max-width: 260px;
+  margin-left: auto;
+  appearance: none;
+  border: 1px solid var(--dark-line);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.pw-search::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.pw-count {
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.pw-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.pw-chip {
+  appearance: none;
+  border: 1px solid var(--dark-line);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  border-radius: 14px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.pw-chip.on {
+  background: #fff;
+  border-color: #fff;
+  color: var(--dark);
+  font-weight: 600;
+}
+
+.pw-tip {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--warn);
+}
+
+/* 瀑布流：CSS columns（<1100px 转 3 列） */
+.pw-canvas {
+  columns: 4;
+  column-gap: 8px;
+  margin-top: 12px;
+}
+
+.pw-item {
+  position: relative;
+  break-inside: avoid;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--dark2);
+  cursor: pointer;
+}
+
+.pw-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pw-ph {
+  width: 100%;
+  height: 100%;
+  background: var(--dark2);
+}
+
+.pw-hit {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  z-index: 2;
+  background: rgba(47, 125, 79, 0.92);
+  color: #fff;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  max-width: 80%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pw-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: 14px 8px 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.9);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.pw-item:hover .pw-name {
+  opacity: 1;
+}
+
+.pw-foot {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.pw-hint {
+  margin: 0;
+  padding: 24px 0;
+  text-align: center;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* 大图预览 */
+.pw-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pw-lb-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+}
+
+.pw-lb-body {
+  position: relative;
+  max-width: 92vw;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.pw-lb-body img {
+  max-width: 92vw;
+  max-height: 78vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+/* 大图查看器：滚轮缩放 + 拖动平移（transform 在 JS 里实时写） */
+.pw-lb-img {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  will-change: transform;
+  transition: transform 80ms ease-out;
+}
+
+.pw-lb-img.dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
+.pw-lb-tip {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+}
+
+.pw-lb-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+}
+
+.pw-lightbox .pw-hint {
+  color: rgba(255, 255, 255, 0.8);
+  padding: 40px 0;
+}
+
+/* 时间线 */
+.pd-tl {
+  padding-left: 4px;
+}
+
+.pd-tl-item {
+  position: relative;
+  padding: 0 0 14px 16px;
+  border-left: 1px solid var(--line);
+}
+
+.pd-tl-item:last-child {
+  border-left-color: transparent;
+  padding-bottom: 0;
+}
+
+.pd-tl-item i {
+  position: absolute;
+  left: -4px;
+  top: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--line2);
+}
+
+.pd-tl-t {
+  font-size: 13px;
+  color: var(--fg2);
+}
+
+.pd-tl-d {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ---------- A-5 上传抽屉 ---------- */
+
+.up-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 480px;
+  max-width: 92vw;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-left: 1px solid var(--line);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08);
+  transform: translateX(100%);
+  transition: transform 0.22s ease;
+}
+
+.up-drawer.open {
+  transform: translateX(0);
+}
+
+.up-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.up-drawer-t {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.up-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px;
+}
+
+.up-min {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 24px;
+  background: var(--dark);
+  color: #fff;
+  font-size: 13px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+/* ---------- 响应式 ---------- */
+
+@media (max-width: 1100px) {
+  .pw-canvas {
+    columns: 3;
+  }
+}
+
+@media (max-width: 900px) {
+  .pd-grid {
+    flex-direction: column;
+  }
+  .pd-side {
+    flex: none;
+    width: 100%;
+  }
+  .pw-canvas {
+    columns: 2;
+  }
+}
+
+/* E-3：照片墙空态（给一个能点的下一步，不只是写一行字） */
+.pw-empty {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.pw-empty .pw-hint {
+  margin-bottom: 16px;
+}
+
+/* E-4：项目卡片上的续期入口（止损按钮） */
+.cs-proj-extend {
+  margin-top: 10px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: #fff;
+  background: #c0392b;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.cs-proj-extend:hover {
+  background: #a5301f;
+}
+
+.cs-proj-extend:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* E-6：上传完成 → 邀请模特的引导卡 */
+.pd-guide {
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  background: #f3f8f5;
+  border: 1px solid #2f7d4f;
+  border-radius: 10px;
+}
+
+.pd-guide-t {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f5237;
+  margin-bottom: 6px;
+}
+
+.pd-guide-d {
+  font-size: 13px;
+  color: #5a6b62;
+  margin-bottom: 12px;
+  line-height: 1.6;
+}

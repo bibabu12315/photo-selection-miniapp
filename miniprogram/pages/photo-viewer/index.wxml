@@ -1,6 +1,11 @@
 <wxs src="./gest.wxs" module="gest" />
 <view class="page">
-  <view wx:if="{{!ready}}" class="hint">加载中…</view>
+  <view wx:if="{{loadError}}" class="state">
+    <view class="state-t">没有加载到照片</view>
+    <view class="state-d">可能是链接已过期，返回列表重新进入即可</view>
+    <view class="state-btn" bindtap="goBack">返回列表</view>
+  </view>
+  <view wx:elif="{{!ready}}" class="hint">加载中…</view>
 
   <block wx:else>
     <!-- 手势全部由 gest.wxs 在渲染层处理（缩放/拖动/翻页），不走逻辑层，保证丝滑 -->
@@ -19,11 +24,29 @@
         <view class="slide" wx:for="{{photos}}" wx:key="_id">
           <view class="img-wrap" id="wrap{{index}}">
             <image
-              class="big"
+              class="big {{loaded[index]}}"
               src="{{previewUrls[index] || item.thumbUrl}}"
               mode="aspectFit"
               lazy-load="{{true}}"
+              data-index="{{index}}"
+              bindload="onImgLoad"
+              binderror="onImgError"
             />
+            <!-- 加载不出来不能只剩一张糊缩略图：给就地重试。
+                 触摸事件在此处截断，避免误触 dispatch 给 gest.wxs 造成翻页/缩放 -->
+            <view
+              wx:if="{{failed[index]}}"
+              class="fail"
+              data-index="{{index}}"
+              catchtap="retryImg"
+              catchtouchstart="noop"
+              catchtouchmove="noop"
+              catchtouchend="noop"
+              catchtouchcancel="noop"
+            >
+              <view class="fail-t">这张没加载出来</view>
+              <view class="fail-b">点此重试</view>
+            </view>
           </view>
         </view>
       </view>

@@ -49,6 +49,17 @@
   margin-top: 12rpx;
 }
 
+/* 错误态重试入口（model-home 同款，浅色主题配色） */
+.retry {
+  display: inline-block;
+  margin-top: 24rpx;
+  padding: 12rpx 32rpx;
+  border: 1rpx solid #ddd;
+  border-radius: 999rpx;
+  color: #666;
+  font-size: 26rpx;
+}
+
 .meta {
   font-size: 24rpx;
   color: var(--muted);
@@ -124,23 +135,115 @@
   font-size: 24rpx;
 }
 
-.grid {
+/* 照片墙筛选条（B-4）：全部 / 已选 / 未选 */
+.filters {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 20rpx;
+}
+
+.f {
+  padding: 10rpx 28rpx;
+  font-size: 26rpx;
+  color: var(--fg2);
+  background: var(--chip);
+  border-radius: 999rpx;
+}
+
+.f.on {
+  background: #1a1a1a;
+  color: #ffffff;
+}
+
+.f-count {
+  margin-left: auto;
+  font-size: 22rpx;
+  color: var(--muted);
+}
+
+/* 瀑布流：两列等宽，高度由 JS 按原始宽高比算好写在 style 上 */
+.masonry {
+  display: flex;
+  align-items: flex-start;
+  gap: 8rpx;
+}
+
+.col {
+  flex: 1;
+  width: 0;
+  display: flex;
+  flex-direction: column;
   gap: 8rpx;
 }
 
 .cell {
-  width: calc((100% - 24rpx) / 4);
-  height: 165rpx;
+  position: relative;
   background: #eee;
   border-radius: 8rpx;
   overflow: hidden;
 }
 
+/* 缩略图加载失败：就地提示 + 重试，不留一片灰格子 */
+.cell-fail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  font-size: 22rpx;
+  color: #999;
+  background: #f0f0ee;
+}
+
+.cf-btn {
+  padding: 8rpx 24rpx;
+  font-size: 24rpx;
+  color: #fff;
+  background: #2f7d4f;
+  border-radius: 999rpx;
+}
+
+/* 被选中：绿框，三端统一 #4CAF7D */
+.cell.on {
+  box-shadow: inset 0 0 0 3rpx #4caf7d;
+}
+
 .cell-img {
   width: 100%;
   height: 100%;
+}
+
+/* 「这张被谁选中」：多人选同一张 = 最值得精修的那张 */
+.cell-tag {
+  position: absolute;
+  left: 8rpx;
+  bottom: 8rpx;
+  max-width: calc(100% - 16rpx);
+  padding: 4rpx 12rpx;
+  font-size: 20rpx;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 999rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more {
+  text-align: center;
+  font-size: 24rpx;
+  color: #999;
+  padding: 32rpx 0;
+}
+
+.more.retry {
+  color: #666;
 }
 
 .note {
@@ -173,12 +276,117 @@
   border-radius: 12rpx;
 }
 
+/* 重新开放：红框警示色——它会解锁模特已锁定的选择，不能做成普通按钮 */
 .bar-btn.ghost {
   background: #fff;
   color: #c0392b;
-  border: 1rpx solid #e0b4ae;
+  border: 2rpx solid #c0392b;
 }
 
 .bar-btn.disabled {
   opacity: 0.5;
+}
+
+/* ---------- 照片墙导航区（U-W1：与网页端同构） ---------- */
+
+/* 三行导航整体吸顶：滚动时筛选/搜索/chips 常驻，瀑布流从下面穿过 */
+.wall-head {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #f6f6f6;
+  padding: 4rpx 0 8rpx;
+  margin-bottom: 8rpx;
+}
+
+/* 搜索框：同网页端，只过滤已加载进端的照片 */
+.wsearch {
+  position: relative;
+  margin-bottom: 12rpx;
+}
+
+.wsearch-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 64rpx;
+  padding: 0 64rpx 0 24rpx;
+  font-size: 26rpx;
+  color: #111;
+  background: #ffffff;
+  border: 1rpx solid var(--line);
+  border-radius: 12rpx;
+}
+
+.wsearch-clear {
+  position: absolute;
+  right: 16rpx;
+  top: 0;
+  height: 64rpx;
+  line-height: 64rpx;
+  width: 40rpx;
+  text-align: center;
+  color: #999;
+  font-size: 32rpx;
+}
+
+/* 模特 chips（仅「已选」档出现）：全部模特 + 各模特已选数 */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.chip {
+  padding: 8rpx 22rpx;
+  font-size: 24rpx;
+  color: var(--fg2);
+  background: var(--chip);
+  border-radius: 999rpx;
+}
+
+.chip.on {
+  background: #1a1a1a;
+  color: #ffffff;
+}
+
+/* 格子底部文件名：与相机原名一致，一眼核对 */
+.cell-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 20rpx 10rpx 6rpx;
+  font-size: 18rpx;
+  color: rgba(255, 255, 255, 0.92);
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.45));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: Menlo, Consolas, monospace;
+}
+
+/* 清单视图底栏：照片墙 + 重新开放 并排 */
+.bar-two {
+  display: flex;
+  gap: 16rpx;
+}
+
+.bar-half {
+  flex: 1;
+}
+
+/* 有吸顶导航时，首个筛选行不再需要原来的下边距（wall-head 已给） */
+.wall-head .filters {
+  margin-bottom: 12rpx;
+}
+
+/* E-3：照片墙空态里的下一步按钮 */
+.more-btn {
+  display: inline-block;
+  margin-top: 20rpx;
+  padding: 14rpx 40rpx;
+  font-size: 26rpx;
+  color: #fff;
+  background: #2f7d4f;
+  border-radius: 999rpx;
 }

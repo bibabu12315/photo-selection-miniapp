@@ -12,12 +12,15 @@
       <view class="done-title">已提交给摄影师</view>
       <view class="done-meta">{{projectName}}</view>
       <view class="done-meta">当前已选 {{selectedCount}} 张照片</view>
-      <view class="done-hint">想换几张？随时可以回到选片页继续调整，重新提交即覆盖。</view>
-      <view class="reopen-btn" bindtap="reopen">继续调整</view>
+      <!-- BR-605 / C-4：提交即锁定，这里不允许出现任何自行修改入口 -->
+      <view class="done-hint">已锁定 · 如需修改选片，请联系摄影师重新开放</view>
     </view>
   </block>
 
   <block wx:else>
+    <!-- 自动保存失败才挂这条提示；保存成功必须静默（BR-503） -->
+    <view wx:if="{{unsaved}}" class="unsaved-bar">未保存，正在重试…</view>
+
     <view class="head">
       <view wx:if="{{resubmitHint}}" class="resubmit-tip">
         已提交过一版（{{selectedCount}} 张），可在此基础上继续调整，改完记得重新提交
@@ -31,26 +34,91 @@
       </view>
     </view>
 
-    <view class="grid">
-      <view
-        class="cell"
-        wx:for="{{photos}}"
-        wx:key="_id"
-        data-id="{{item._id}}"
-        data-index="{{index}}"
-      >
-        <!-- 点图片：进全屏大图细看（缩放 / 滑动切图） -->
-        <image
-          class="thumb"
-          src="{{item.thumbUrl}}"
-          mode="aspectFill"
-          lazy-load="{{true}}"
-          data-index="{{index}}"
-          bindtap="openViewer"
-        />
-        <!-- 点圆圈徽章：直接选中/取消（快速批量勾选） -->
-        <view class="badge-hit" catchtap="toggle" data-id="{{item._id}}">
-          <view class="badge {{item.selected ? 'on' : ''}}">{{item.selected ? '✓' : ''}}</view>
+    <!-- E-10：只看已选（本地过滤，与摄影师端 Tab 语言一致） -->
+    <view class="tabs">
+      <view class="tab {{tab === 'all' ? 'on' : ''}}" data-tab="all" bindtap="switchTab">
+        全部 {{photos.length}}
+      </view>
+      <view class="tab {{tab === 'selected' ? 'on' : ''}}" data-tab="selected" bindtap="switchTab">
+        已选 {{selectedCount}}
+      </view>
+    </view>
+
+    <!-- 空态（F-23）：摄影师还没传照片时不能是一片空白 -->
+    <view wx:if="{{emptyPhotos && !loadingMore && !loadError}}" class="center empty-photos">
+      <view>摄影师还没有上传照片</view>
+      <view class="empty-sub">照片在电脑上批量上传，传完刷新这一页就能开始选</view>
+      <view class="retry-btn" bindtap="retryLoad">刷新</view>
+    </view>
+
+    <!-- 在「已选」档下还没选任何一张 -->
+    <view
+      wx:elif="{{tab === 'selected' && colA.length === 0 && colB.length === 0 && !loadingMore && !emptyPhotos}}"
+      class="center empty-photos"
+    >
+      <view>还没有选中任何照片</view>
+      <view class="empty-sub">回到「全部」点照片右下角的圆圈就能选中</view>
+      <view class="retry-btn" data-tab="all" bindtap="switchTab">回到全部</view>
+    </view>
+
+    <!-- 瀑布流：两列由 JS 分列（colA / colB），高度按原始宽高比算，横竖混排不留空位 -->
+    <view class="masonry">
+      <view class="col">
+        <view
+          class="cell {{item.selected ? 'on' : ''}}"
+          wx:for="{{colA}}"
+          wx:key="_id"
+          style="height: {{item.h}}rpx"
+        >
+          <!-- 点图片：进全屏大图细看（缩放 / 滑动切图） -->
+          <!-- loaded 由 bindload 写入：anim=淡入，fast=缓存命中直接显示（F-22 / BR-507） -->
+          <image
+            class="thumb {{item.loaded}}"
+            src="{{item.thumbUrl}}"
+            mode="aspectFill"
+            lazy-load="{{true}}"
+            data-idx="{{item.idx}}"
+            data-id="{{item._id}}"
+            bindload="onThumbLoad"
+            binderror="onImgError"
+            bindtap="openViewer"
+          />
+          <!-- 临时链接过期/取链失败：自动换一条重试，仍失败才给手动入口 -->
+          <view class="cell-fail" wx:if="{{item.failed}}" data-id="{{item._id}}" catchtap="retryImg">
+            没加载出来<text class="cf-btn">点此重试</text>
+          </view>
+          <!-- 点圆圈徽章：直接选中/取消（快速批量勾选） -->
+          <view class="badge-hit" catchtap="toggle" data-id="{{item._id}}">
+            <view class="badge {{item.selected ? 'on' : ''}}">{{item.selected ? '✓' : ''}}</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="col">
+        <view
+          class="cell {{item.selected ? 'on' : ''}}"
+          wx:for="{{colB}}"
+          wx:key="_id"
+          style="height: {{item.h}}rpx"
+        >
+          <image
+            class="thumb {{item.loaded}}"
+            src="{{item.thumbUrl}}"
+            mode="aspectFill"
+            lazy-load="{{true}}"
+            data-idx="{{item.idx}}"
+            data-id="{{item._id}}"
+            bindload="onThumbLoad"
+            binderror="onImgError"
+            bindtap="openViewer"
+          />
+          <!-- 临时链接过期/取链失败：自动换一条重试，仍失败才给手动入口 -->
+          <view class="cell-fail" wx:if="{{item.failed}}" data-id="{{item._id}}" catchtap="retryImg">
+            没加载出来<text class="cf-btn">点此重试</text>
+          </view>
+          <view class="badge-hit" catchtap="toggle" data-id="{{item._id}}">
+            <view class="badge {{item.selected ? 'on' : ''}}">{{item.selected ? '✓' : ''}}</view>
+          </view>
         </view>
       </view>
     </view>
@@ -61,10 +129,22 @@
 
     <view class="bar-space"></view>
     <view class="bar">
+      <!-- E-2：直白话 > 分数。有上限时说「还能选几张」，没有就说不限 -->
       <view class="bar-info">
-        已选 <text class="num">{{selectedCount}}</text> / {{limitText}}
+        已选 <text class="num">{{selectedCount}}</text> 张<block wx:if="{{packageCount > 0}}"> · 还能选 {{packageCount - selectedCount}} 张</block><block wx:else> · 不限张数</block>
       </view>
       <view class="bar-btn {{submitting ? 'disabled' : ''}}" bindtap="submit">提交选片</view>
+    </view>
+
+    <!-- E-5：首次进入的一次性引导（3 秒自动消失，点任意处立即关闭） -->
+    <view wx:if="{{guide}}" class="gmask" bindtap="closeGuide">
+      <view class="gcard">
+        <view class="gtitle">怎么选片</view>
+        <view class="grow">① 点照片右下角的圆圈 = 选中</view>
+        <view class="grow">② 再点一次 = 取消</view>
+        <view class="grow">③ 选完点底部「提交选片」，提交后不能自行修改</view>
+        <view class="gok">知道了</view>
+      </view>
     </view>
   </block>
 </view>

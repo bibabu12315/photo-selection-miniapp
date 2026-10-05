@@ -12,6 +12,18 @@
       <view wx:if="{{usedText}}" class="note">云存储占用 {{usedText}}</view>
     </view>
 
+    <!-- 状态进度条：四步都由现有数据派生，不新增存储状态（BR-204） -->
+    <view class="steps">
+      <view
+        class="step {{item.done ? 'done' : ''}}"
+        wx:for="{{steps}}"
+        wx:key="text"
+      >
+        <view class="step-dot">{{item.done ? '✓' : index + 1}}</view>
+        <view class="step-t">{{item.text}}</view>
+      </view>
+    </view>
+
     <!-- ① 照片 -->
     <view class="sect-title">① 照片</view>
     <view class="card">
@@ -28,6 +40,11 @@
       <view class="hr"></view>
       <view class="btn" bindtap="openUpload">
         {{project.photoCount > 0 ? '继续上传照片' : '去电脑上传'}}
+      </view>
+      <!-- 照片墙入口：看全部照片 + 谁选了哪张（B-3 / B-4） -->
+      <view class="wall-link" bindtap="openWall">
+        查看照片墙 ›
+        <text class="wall-sub">{{project.photoCount || 0}} 张</text>
       </view>
     </view>
 
@@ -47,6 +64,7 @@
           <view class="chip {{item.statusClass}}">{{item.status}}</view>
         </view>
         <view class="ops">
+          <view class="op" data-index="{{index}}" bindtap="tapNotify" wx:if="{{item.needNotify}}">通知我</view>
           <view class="op" data-index="{{index}}" bindtap="copyInviteLink">复制链接</view>
           <view class="op" data-index="{{index}}" bindtap="makeQrCode">
             {{qrMaking ? '生成中…' : '小程序码'}}

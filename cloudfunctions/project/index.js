@@ -11,6 +11,45 @@ const MAX_MODELS = 5
 /** 过期后多久自动归档（宽限期，避免刚到期就删图） */
 const ARCHIVE_GRACE_DAYS = 7
 
+/** 网页会话的有效状态：登出后置 REVOKED，这里只认 ACTIVE */
+const SESSION_ACTIVE = 'ACTIVE'
+
+/* ---------- 身份解析 ---------- */
+
+/**
+ * 解析调用者 openid。
+ * 小程序路径优先于网页路径（BR-105）：即便网页的 event 里混入 sessionToken，
+ * 只要请求真的来自小程序就以微信签发的 OPENID 为准，防止网页伪造提权。
+ * 返回 '' 表示无法识别身份，调用方必须拒绝。
+ */
+async function resolveCaller(event) {
+  const { OPENID } = cloud.getWXContext()
+  if (OPENID) return OPENID
+
+  const token = String((event && event.sessionToken) || '').trim()
+  if (!token) return ''
+  return await openidBySessionToken(token)
+}
+
+/** 网页会话换 openid：token 不存在 / 已登出 / 已过期，一律视为无身份 */
+async function openidBySessionToken(token) {
+  try {
+    const res = await db
+      .collection('session')
+      .where({ token, status: SESSION_ACTIVE })
+      .limit(1)
+      .get()
+    const s = res.data && res.data[0]
+    if (!s || !s.openid) return ''
+    if (!s.tokenExpireAt || s.tokenExpireAt < Date.now()) return ''
+    return s.openid
+  } catch (e) {
+    // session 集合尚未建立（T-P0-2 之前）时，小程序路径必须照常可用
+    console.warn('[project] 会话校验失败', e && e.message)
+    return ''
+  }
+}
+
 /**
  * 项目管理云函数（仅摄影师可调用，V2.0）
  *
@@ -29,41 +68,43 @@ const ARCHIVE_GRACE_DAYS = 7
  * action = getInviteQrCode   生成该模特的小程序码（scene = 邀请 token）{ inviteId }
  */
 exports.main = async (event = {}) => {
-  const { OPENID } = cloud.getWXContext()
-
-  if (!OPENID) {
-    return { ok: false, error: '取不到 OPENID，请通过小程序端调用' }
+  // 同一套 action 同时服务两端：小程序用 OPENID，网页用 sessionToken 换出来的同一个 openid
+  const openid = await resolveCaller(event)
+  if (!openid) {
+    return { ok: false, error: '登录已过期，请重新扫码登录', code: 'ERR_NO_AUTH' }
   }
 
   try {
-    if (!(await isAdmin(OPENID))) {
+    if (!(await isAdmin(openid))) {
       return { ok: false, error: '无权限：请先绑定摄影师' }
     }
 
-    // 所有 action 都带 OPENID：项目归属到人，摄影师之间互不可见
+    // 所有 action 都带 openid：项目归属到人，摄影师之间互不可见
     switch (event.action) {
       case 'create':
-        return await createProject(event, OPENID)
+        return await createProject(event, openid)
       case 'list':
-        return await listProjects(OPENID)
+        return await listProjects(openid)
       case 'get':
-        return await getProject(event._id, OPENID)
+        return await getProject(event._id, openid)
       case 'remove':
-        return await removeProject(event._id, OPENID)
+        return await removeProject(event._id, openid)
       case 'extend':
-        return await extendProject(event._id, OPENID)
+        return await extendProject(event._id, openid)
       case 'archive':
-        return await archiveProject(event._id, OPENID, true)
+        return await archiveProject(event._id, openid, true)
       case 'issueUploadCode':
-        return await issueUploadCode(event._id, OPENID)
+        return await issueUploadCode(event._id, openid)
       case 'createInvite':
-        return await createInvite(event, OPENID)
+        return await createInvite(event, openid)
       case 'removeInvite':
-        return await removeInvite(event.inviteId, OPENID)
+        return await removeInvite(event.inviteId, openid)
+      case 'setInviteNotify':
+        return await setInviteNotify(event.inviteId, openid)
       case 'listInvites':
-        return await listInvites(event.projectId, OPENID)
+        return await listInvites(event.projectId, openid)
       case 'getInviteQrCode':
-        return await getInviteQrCode(event.inviteId, OPENID)
+        return await getInviteQrCode(event.inviteId, openid)
       default:
         return { ok: false, error: '未知 action: ' + (event.action || '') }
     }
@@ -97,11 +138,10 @@ async function createProject(event, openid) {
     note: String(event.note || '').trim().slice(0, 200),
     shootDate: shootAt || now,
     status: 'DRAFT',
-    // 默认档 standard = 1600 / 75：单条最大的成本杠杆，见 docs/云成本优化-四项技术任务.md
-    previewSpec: { preset: 'standard', longEdge: 1600, quality: 75, watermarkText: '' },
     expireAt: now + expireDays * 86400000,
     packageCount,
     usedBytes: 0,
+    qrcodeBytes: 0,
     uploadCode: '',
     uploadCodeExpireAt: 0,
     uploadToken: '',
@@ -157,36 +197,107 @@ async function archiveProject(id, openid, manual) {
   }
 
   const previewIDs = []
-  let thumbBytes = 0
   for (let page = 0; page < 20; page++) {
     const res = await db
       .collection('photo')
       .where({ projectId: id })
-      .field({ previewFileID: 1, thumbBytes: 1 })
+      .field({ previewFileID: 1 })
       .skip(page * 1000)
       .limit(1000)
       .get()
     const list = res.data || []
     for (const p of list) {
       if (p.previewFileID) previewIDs.push(p.previewFileID)
-      thumbBytes += parseInt(p.thumbBytes, 10) || 0
     }
     if (list.length < 1000) break
   }
 
   const del = await deleteFiles(previewIDs)
   const now = Date.now()
+  // 校准 usedBytes / photoCount：preview 已删，只剩 thumb（+ 二维码 PNG）
+  // 删除失败的 preview 仍在云上，按 BR-904 不予扣减
+  const usage = await recomputeProjectUsage(id, {
+    includePreview: false,
+    keepPreviewFileIDs: new Set(del.failedList || []),
+  })
+  if (del.failed > 0) {
+    console.error('[project] 归档有 preview 未删掉，仍计入用量', id, del.failed)
+  }
   await db.collection('project').doc(id).update({
     data: {
       status: 'ARCHIVED',
       archivedAt: now,
       archivedBy: manual ? 'manual' : 'auto',
-      usedBytes: thumbBytes,
       updatedAt: now,
     },
   })
 
-  return { ok: true, data: { archived: true, deletedFiles: del.deleted, usedBytes: thumbBytes } }
+  return {
+    ok: true,
+    data: {
+      archived: true,
+      deletedFiles: del.deleted,
+      failedFiles: del.failed,
+      usedBytes: usage.usedBytes,
+      photoCount: usage.photoCount,
+    },
+  }
+}
+
+/**
+ * 用量校准节点之一（BR-1001 / BR-1003）：按 photo 与 invite 实际记录聚合，
+ * 用真实值覆盖增量计数器，消掉并发与重试带来的漂移。
+ *
+ * @param includePreview      preview 云文件是否仍在存储上（归档后为 false）
+ * @param keepPreviewFileIDs  删除失败但仍在云上的 preview，继续计入（BR-904）
+ *
+ * photo 可能上千条，**必须分页**；invite 最多 MAX_MODELS 条，一次取完。
+ */
+async function recomputeProjectUsage(projectId, opts) {
+  const includePreview = !!(opts && opts.includePreview)
+  const keep = (opts && opts.keepPreviewFileIDs) || new Set()
+
+  let bytes = 0
+  let photoCount = 0
+  for (let page = 0; page < 20; page++) {
+    const res = await db
+      .collection('photo')
+      .where({ projectId })
+      .field({ previewFileID: 1, previewBytes: 1, thumbBytes: 1 })
+      .skip(page * 1000)
+      .limit(1000)
+      .get()
+    const list = res.data || []
+    for (const x of list) {
+      photoCount++
+      bytes += parseInt(x.thumbBytes, 10) || 0
+      if (includePreview || keep.has(x.previewFileID)) {
+        bytes += parseInt(x.previewBytes, 10) || 0
+      }
+    }
+    if (list.length < 1000) break
+  }
+
+  // 邀请二维码 PNG 也是这个项目在云上的实际占用（BR-1002）
+  let qrcodeBytes = 0
+  try {
+    const invRes = await db
+      .collection('invite')
+      .where({ projectId })
+      .field({ qrBytes: 1 })
+      .limit(20)
+      .get()
+    for (const i of invRes.data || []) qrcodeBytes += parseInt(i.qrBytes, 10) || 0
+  } catch (e) {
+    /* invite 集合不存在时忽略 */
+  }
+  bytes += qrcodeBytes
+
+  const now = Date.now()
+  await db.collection('project').doc(projectId).update({
+    data: { usedBytes: bytes, qrcodeBytes, photoCount, updatedAt: now },
+  })
+  return { usedBytes: bytes, qrcodeBytes, photoCount }
 }
 
 async function getProject(id, openid) {
@@ -285,18 +396,19 @@ async function deleteProjectFiles(id) {
 async function deleteFiles(fileIDs) {
   const list = Array.from(new Set((fileIDs || []).filter(Boolean)))
   let deleted = 0
-  const failed = []
+  const failedList = []
   for (let i = 0; i < list.length; i += 50) {
     const chunk = list.slice(i, i + 50)
     try {
       await cloud.deleteFile({ fileList: chunk })
       deleted += chunk.length
     } catch (e) {
-      failed.push(...chunk)
+      failedList.push(...chunk)
       console.error('deleteFile 失败', e && e.message)
     }
   }
-  return { deleted, failed: failed.length }
+  // failedList 供调用方判断「哪些文件其实还在云上」（BR-904：这部分不扣减用量）
+  return { deleted, failed: failedList.length, failedList }
 }
 
 async function extendProject(id, openid) {
@@ -308,13 +420,26 @@ async function extendProject(id, openid) {
   const expireAt = base + 30 * 86400000
 
   // 归档项目续期：缩略图和已选文件名还在，但 preview 已删，需重新上传才能再选片
+  // 已过期不再占用状态码（R-3）：它由 expireAt 派生，上面重算 expireAt 时已经照顾到了
   const restored = p.status === 'ARCHIVED'
-  const status = restored ? 'UPLOADING' : p.status === 'EXPIRED' ? 'SELECTING' : p.status
+  const status = restored ? 'UPLOADING' : p.status
 
   await db.collection('project').doc(id).update({
     data: { expireAt, status, archivedAt: restored ? 0 : p.archivedAt || 0, updatedAt: Date.now() },
   })
-  return { ok: true, data: { expireAt, restored, needReupload: restored } }
+
+  // 校准节点之一（BR-1001）：从归档恢复的项目 preview 已被删掉，重算时不能计入
+  const usage = await recomputeProjectUsage(id, { includePreview: !restored })
+  return {
+    ok: true,
+    data: {
+      expireAt,
+      restored,
+      needReupload: restored,
+      usedBytes: usage.usedBytes,
+      photoCount: usage.photoCount,
+    },
+  }
 }
 
 async function issueUploadCode(id, openid) {
@@ -333,7 +458,7 @@ async function issueUploadCode(id, openid) {
 
 /* ---------- 模特邀请 ---------- */
 
-async function createInvite({ projectId, displayName }, openid) {
+async function createInvite({ projectId, displayName, notify }, openid) {
   const own = await ownedProject(projectId, openid)
   if (!own.ok) return { ok: false, error: own.error }
   const p = own.project
@@ -350,8 +475,17 @@ async function createInvite({ projectId, displayName }, openid) {
   })
   const modelId = mAdd._id
 
+  // notify：发邀请时顺带完成一次订阅授权（22_API 3.8）。
+  // 实际授权入口在小程序端（requestSubscribeMessage 只能小程序调），网页端不传此参数
   const iAdd = await db.collection('invite').add({
-    data: { projectId, modelId, token: randomBase62(22), createdAt: now },
+    data: {
+      projectId,
+      modelId,
+      token: randomBase62(22),
+      notifyAuth: !!notify,
+      notifyAuthAt: notify ? now : 0,
+      createdAt: now,
+    },
   })
 
   const models = (p.models || []).concat([
@@ -365,6 +499,26 @@ async function createInvite({ projectId, displayName }, openid) {
     ok: true,
     data: { inviteId: iAdd._id, modelId, token: '', models },
   }
+}
+
+/**
+ * 登记一次订阅授权（T-P2-3）
+ * 小程序端 wx.requestSubscribeMessage 用户点「允许」后调用。
+ * 一次授权 = 一次推送，模特提交时被 selection 云函数消耗。
+ */
+async function setInviteNotify(inviteId, openid) {
+  if (!inviteId) return { ok: false, error: '缺少邀请 _id' }
+  const res = await db.collection('invite').doc(inviteId).get()
+  const inv = res.data
+  if (!inv) return { ok: false, error: '邀请不存在' }
+
+  const own = await ownedProject(inv.projectId, openid)
+  if (!own.ok) return { ok: false, error: own.error }
+
+  await db.collection('invite').doc(inviteId).update({
+    data: { notifyAuth: true, notifyAuthAt: Date.now() },
+  })
+  return { ok: true, data: { notifyAuth: true } }
 }
 
 async function removeInvite(inviteId, openid) {
@@ -431,13 +585,26 @@ async function getInviteQrCode(inviteId, openid) {
     scene: inv.token,
     page: 'pages/client-select/index',
     checkPath: false,
-    envVersion: 'trial',
+    // 正式版（BR-407）：小程序正式版发布后，此处必须为 release，否则生成的邀请码扫不出来。
+    // 灰度期如需回退体验版测试：把 release 改回 trial 并重新部署本云函数
+    envVersion: 'release',
     width: 430,
   })
   if (!qr || !qr.buffer) return { ok: false, error: '小程序码生成失败' }
 
   const cloudPath = `p/${inv.projectId}/qrcode-${inv.modelId}.png`
   await cloud.uploadFile({ cloudPath, fileContent: qr.buffer })
+
+  // 二维码 PNG 计入容量（BR-1002，原来漏计）。
+  // 同一位模特重复生成是按原路径覆盖云文件，因此按「新旧差值」调整，避免重复累加
+  const qrBytes = (qr.buffer && qr.buffer.length) || 0
+  const delta = qrBytes - (parseInt(inv.qrBytes, 10) || 0)
+  await db.collection('invite').doc(inviteId).update({ data: { qrBytes } })
+  if (delta) {
+    await db.collection('project').doc(inv.projectId).update({
+      data: { usedBytes: _.inc(delta), qrcodeBytes: _.inc(delta), updatedAt: Date.now() },
+    })
+  }
 
   const env = (cloud.getWXContext() || {}).ENV || cloud.DYNAMIC_CURRENT_ENV
   return { ok: true, data: { fileID: `cloud://${env}.${bucket()}/${cloudPath}` } }

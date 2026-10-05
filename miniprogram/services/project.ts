@@ -18,10 +18,13 @@ export interface InviteItem {
   _id: string
   modelId: string
   token: string
+  /** true = 还有一次数推送额度（模特提交时消耗） */
+  notifyAuth?: boolean
 }
 
 export async function createProject(input: CreateProjectInput) {
-  return callSafe<{ _id: string }>('project', { action: 'create', ...input })
+  // 展开运算符会被 IDE 降级编译成 @babel/runtime helper（项目无 node_modules → 引用方页面白屏），这里用 Object.assign
+  return callSafe<{ _id: string }>('project', Object.assign({ action: 'create' }, input))
 }
 
 export async function listProjects() {
@@ -72,6 +75,14 @@ export async function createInvite(projectId: string, displayName: string) {
 
 export async function removeInvite(inviteId: string) {
   return callSafe<{ removed: boolean }>('project', { action: 'removeInvite', inviteId })
+}
+
+/**
+ * 登记「选片完成通知我」的一次授权（T-P2-3）
+ * 前置：本函数被用户点击事件里 wx.requestSubscribeMessage 的「允许」回调调用
+ */
+export async function setInviteNotify(inviteId: string) {
+  return callSafe<{ notifyAuth: boolean }>('project', { action: 'setInviteNotify', inviteId })
 }
 
 export async function listInvites(projectId: string) {

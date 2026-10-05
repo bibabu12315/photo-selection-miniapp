@@ -1,4 +1,11 @@
 <view class="page">
+  <!-- D-1：小程序端不放「新建项目」入口，用这条显眼的引导条承接「要建项目 → 去电脑」 -->
+  <view class="guide-bar">
+    <view class="guide-t">新建项目 · 上传照片 · 导出清单都在电脑上</view>
+    <view class="guide-d">复制控制台地址，在电脑浏览器里打开即可</view>
+    <view class="guide-btn" bindtap="copyConsoleUrl">复制控制台地址</view>
+  </view>
+
   <view wx:if="{{loading && projects.length === 0}}" class="empty">加载中…</view>
 
   <view wx:elif="{{loadError}}" class="empty" bindtap="retryLoad">
@@ -7,9 +14,11 @@
   </view>
 
   <block wx:else>
+    <!-- E-3：空态不能只写「暂无数据」，给一个能点下一步的按钮 -->
     <view wx:if="{{projects.length === 0}}" class="empty">
       还没有项目
-      <view class="empty-sub">点右上角「+ 新建」，创建后在电脑上上传照片</view>
+      <view class="empty-sub">项目在电脑上创建，复制地址去浏览器打开即可</view>
+      <view class="empty-btn" bindtap="copyConsoleUrl">复制控制台地址</view>
     </view>
 
     <view
@@ -22,12 +31,26 @@
       <view class="row">
         <view class="name">{{item.name}}</view>
         <view class="chip {{item.statusClass}}">{{item.status}}</view>
+        <view class="chip {{item.remainClass}}">{{item.remainText}}</view>
       </view>
       <view class="meta">{{item.meta}}</view>
+
+      <view class="pbar" wx:if="{{item.progress > 0}}">
+        <view class="pbar-in" style="width: {{item.progress}}%"></view>
+      </view>
+
       <view class="hr"></view>
       <view class="models">{{item.modelsLine}}</view>
+      <!-- E-4：快到期 / 已过期时在卡片上直接给续期入口 -->
+      <view
+        wx:if="{{item.extendable}}"
+        class="extend-btn"
+        data-id="{{item._id}}"
+        catchtap="tapExtend"
+      >续期 30 天</view>
+
+      <!-- BR-1204：这里只能给「去电脑」的线索，不能出现上传/新建/导出按钮 -->
+      <view class="pc-link" catchtap="copyConsoleUrl">去电脑上传 ›</view>
     </view>
   </block>
 </view>
-
-<view class="fab" bindtap="goCreate">+ 新建</view>

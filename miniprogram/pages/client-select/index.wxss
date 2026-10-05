@@ -96,6 +96,30 @@
   border-radius: 8rpx;
 }
 
+/* 自动保存失败：顶部常驻提示（F-23）。成功时整条不出现（BR-503 静默） */
+.unsaved-bar {
+  margin-bottom: 16rpx;
+  padding: 14rpx 20rpx;
+  background: #3a1f1f;
+  color: #ff9b8a;
+  font-size: 24rpx;
+  line-height: 1.6;
+  border-radius: 8rpx;
+}
+
+/* 空态：摄影师一张都还没传的情况（F-23） */
+.empty-photos {
+  margin-top: 18vh;
+}
+
+.empty-photos .empty-sub {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #666;
+  line-height: 1.8;
+  margin-bottom: 8rpx;
+}
+
 .head {
   margin-bottom: 24rpx;
 }
@@ -117,24 +141,76 @@
   font-weight: 600;
 }
 
-.grid {
+/* 瀑布流：两列等宽 flex，列内竖向堆叠。高度由 JS 算好写在 style 上 */
+.masonry {
   display: flex;
-  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8rpx;
+}
+
+.col {
+  flex: 1;
+  /* 关键：不给 width:0，长文件名/大图会把列撑宽导致两列不等宽 */
+  width: 0;
+  display: flex;
+  flex-direction: column;
   gap: 8rpx;
 }
 
 .cell {
   position: relative;
-  width: calc((100% - 16rpx) / 3);
-  height: 220rpx;
   background: #1a1a1a;
   border-radius: 8rpx;
   overflow: hidden;
 }
 
+/* 缩略图加载失败：就地提示 + 重试，不留一片黑格子 */
+.cell-fail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  font-size: 22rpx;
+  color: #888;
+  background: #1f1f1f;
+}
+
+.cf-btn {
+  padding: 8rpx 24rpx;
+  font-size: 24rpx;
+  color: #fff;
+  background: #4caf7d;
+  border-radius: 999rpx;
+}
+
+/* 已选：绿框 + 右上角对勾（54 第 6 节三端统一规范 #4CAF7D）
+   用 inset 阴影描边，不占位、不影响图片裁切 */
+.cell.on {
+  box-shadow: inset 0 0 0 3rpx #4caf7d;
+}
+
 .thumb {
   width: 100%;
   height: 100%;
+  /* 没加载出来之前留占位：格子底色（#1a1a1a）可见，不是白块也不是裂图 */
+  opacity: 0;
+}
+
+/* 加载完成 → 淡入，替代 4G 下的「跳入」（11_INTERACTION_SPEC 第九章：200ms ease） */
+.thumb.anim {
+  opacity: 1;
+  transition: opacity 200ms ease;
+}
+
+/* 命中本地缓存的图几乎瞬时返回，直接显示，避免反而闪一下 */
+.thumb.fast {
+  opacity: 1;
 }
 
 /* 徽章外层点击热区：视觉圆圈不变，可点面积更大，好按 */
@@ -219,4 +295,72 @@
 
 .bar-btn.disabled {
   opacity: 0.5;
+}
+
+/* E-10：全部 / 已选 两档 Tab（本地过滤，不请求） */
+.tabs {
+  display: flex;
+  margin: 8rpx 0 20rpx;
+}
+
+.tab {
+  padding: 12rpx 32rpx;
+  margin-right: 16rpx;
+  font-size: 26rpx;
+  color: #999;
+  background: #1a1a1a;
+  border: 1rpx solid #2a2a2a;
+  border-radius: 999rpx;
+}
+
+.tab.on {
+  color: #0d0d0d;
+  background: #4caf7d;
+  border-color: #4caf7d;
+}
+
+/* E-5：首次进入的一次性引导蒙层 */
+.gmask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 90;
+}
+
+.gcard {
+  width: 560rpx;
+  padding: 40rpx 36rpx;
+  background: #171717;
+  border: 1rpx solid #2e2e2e;
+  border-radius: 24rpx;
+}
+
+.gtitle {
+  margin-bottom: 20rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #fff;
+}
+
+.grow {
+  margin-bottom: 14rpx;
+  font-size: 27rpx;
+  line-height: 1.7;
+  color: #cfcfcf;
+}
+
+.gok {
+  margin-top: 24rpx;
+  padding: 16rpx 0;
+  text-align: center;
+  font-size: 28rpx;
+  color: #0d0d0d;
+  background: #4caf7d;
+  border-radius: 999rpx;
 }

@@ -33,8 +33,10 @@
   flex: none;
 }
 
-/* 缩放/拖动作用在这一层，WXS 控制 transform */
+/* 缩放/拖动作用在这一层，WXS 控制 transform。
+   relative 是为了让「加载失败」块相对本张图定位 */
 .img-wrap {
+  position: relative;
   width: 100%;
   height: 100%;
   will-change: transform;
@@ -44,6 +46,70 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
+  /* 没加载出来之前保持黑底，不给裂图（与 client-select 的 .thumb 同口径） */
+  opacity: 0;
+}
+
+/* 加载完成 → 200ms 淡入，替代弱网下「咣」一下跳出来（F-22 / 同上） */
+.big.anim {
+  opacity: 1;
+  transition: opacity 200ms ease;
+}
+
+/* 命中本地缓存的图几乎瞬时返回，直接显示，避免反而闪一下 */
+.big.fast {
+  opacity: 1;
+}
+
+/* 单张加载失败的兜底：就地重试 */
+.fail {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 32rpx 48rpx;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2rpx solid rgba(255, 255, 255, 0.25);
+  border-radius: 16rpx;
+}
+
+.fail-t {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 28rpx;
+}
+
+.fail-b {
+  color: #7aa7ff;
+  font-size: 26rpx;
+  margin-top: 12rpx;
+}
+
+/* 整页错误态：上级页面没把照片传过来（链接过期等） */
+.state {
+  text-align: center;
+  margin-top: 45vh;
+}
+
+.state-t {
+  color: #999;
+  font-size: 32rpx;
+}
+
+.state-d {
+  color: #666;
+  font-size: 24rpx;
+  margin-top: 12rpx;
+}
+
+.state-btn {
+  display: inline-block;
+  margin-top: 36rpx;
+  padding: 16rpx 48rpx;
+  color: #fff;
+  font-size: 28rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.5);
+  border-radius: 40rpx;
 }
 
 .topbar {
@@ -88,23 +154,37 @@
   pointer-events: auto;
 }
 
+/* 文件名：等宽字体，I / l / 1 不会看混；过长截断，不把按钮挤出去 */
 .filename {
   flex: 1;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 24rpx;
+  min-width: 0;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 26rpx;
+  font-family: Menlo, Consolas, 'Courier New', monospace;
+  padding: 10rpx 20rpx;
+  margin-right: 16rpx;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 8rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .like {
+  flex: none;
   color: #fff;
-  font-size: 30rpx;
-  padding: 16rpx 40rpx;
-  border-radius: 40rpx;
-  border: 2rpx solid rgba(255, 255, 255, 0.6);
+  font-size: 28rpx;
+  padding: 14rpx 36rpx;
+  border-radius: 999rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.35);
 }
 
+/* 已选：与三端统一的绿 #4CAF7D（54 第 6 节） */
 .like.on {
-  background: #1f8a4c;
-  border-color: #1f8a4c;
+  background: #4caf7d;
+  border-color: #4caf7d;
+  font-weight: 600;
 }
 
 .like.disabled {

@@ -1,0 +1,1742 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>摄影线上选片平台 · Web 摄影师控制台 UI 2.0</title>
+<style>
+/* ============================ DESIGN TOKENS ============================ */
+:root{
+  --bg:#F5F5F3; --panel:#FFFFFF; --panel2:#FAFAF8; --sunken:#EFEEEB;
+  --fg:#1A1A18; --fg2:#55544E; --muted:#8A897F;
+  --fg-inv:#F2F1ED; --fg-inv2:#A9A79E;
+  --line:#E5E4DF; --line2:#D8D7D0;
+  --ink:#1C1C1A; --ink-h:#2E2E29;
+  --dark:#151513; --dark2:#1E1E1B; --dark3:#262622; --dark-line:#32322D;
+  --ok:#2F7D4F; --ok-bg:#E9F2EC; --ok-line:#C7E0D1;
+  --warn:#9A6B00; --warn-bg:#FBF1DE; --warn-line:#EBD9B4;
+  --info:#3A5FA8; --info-bg:#EBF0F9; --info-line:#CFDCEF;
+  --err:#B03A32; --err-bg:#FAEBE9; --err-line:#EED3CF;
+  --r-card:14px; --r-ctl:8px; --r-sm:6px; --r-pill:999px;
+  --sh-1:0 1px 2px rgba(24,23,20,.04);
+  --sh-2:0 2px 8px rgba(24,23,20,.06);
+  --sh-3:0 6px 20px rgba(24,23,20,.10);
+  --font:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:"SF Mono",ui-monospace,Menlo,Consolas,"Courier New",monospace;
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:#EEEEEB;color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;background:none;color:inherit}
+
+/* ============================ 设计稿外壳 ============================ */
+.ds-bar{position:sticky;top:0;z-index:300;background:#1C1C1A;color:#EDEDE8;display:flex;align-items:center;gap:16px;padding:0 24px;height:56px}
+.ds-brand{font-size:14px;font-weight:600;white-space:nowrap}
+.ds-brand em{font-style:normal;color:#9A988E;font-weight:400;margin-left:8px;font-size:12px}
+.ds-nav{display:flex;gap:2px;flex-wrap:wrap}
+.ds-nav a{font-size:12px;padding:6px 10px;border-radius:6px;color:#B4B2A8;white-space:nowrap}
+.ds-nav a:hover{background:#2E2E29;color:#fff}
+.ds-spacer{flex:1}
+.ds-vp{display:flex;align-items:center;gap:8px}
+.ds-vp span{font-size:11px;color:#8A897F}
+.ds-vp button{font-size:12px;padding:5px 10px;border-radius:6px;background:#2A2A26;color:#C9C7BD;border:1px solid #3A3A34}
+.ds-vp button:hover{background:#35352F;color:#fff}
+.ds-vp button.on{background:#F5F5F3;color:#1A1A18;border-color:#F5F5F3;font-weight:600}
+.ds-wrap{padding:32px 24px 48px}
+.ds-sec{margin:0 auto 48px;max-width:1980px}
+.ds-sec-head{display:flex;align-items:baseline;gap:12px;padding-bottom:12px;margin-bottom:20px;border-bottom:1px solid #DCDCD6;flex-wrap:wrap}
+.ds-sec-head h2{font-size:17px;font-weight:600;margin:0}
+.ds-sec-head .idx{font-size:11px;font-weight:600;color:#fff;background:#1C1C1A;padding:2px 7px;border-radius:999px}
+.ds-sec-head p{margin:0;font-size:12.5px;color:#7C7A72}
+.ds-note{font-size:12.5px;color:#6E6C64;background:#F7F7F4;border:1px solid #E2E1DB;border-left:3px solid #1C1C1A;border-radius:6px;padding:10px 14px;margin:0 0 20px;line-height:1.7}
+.ds-note b{color:#1A1A18}
+
+/* 预览容器 */
+.stage-outer{background:#F5F5F3;border:1px solid #DFDED8;border-radius:14px;overflow:hidden;box-shadow:var(--sh-2);margin-bottom:48px}
+.stage-scroll{overflow-x:auto;overflow-y:hidden;background:#E9E8E3}
+.stage{width:1440px;min-width:1024px;margin:0 auto;transition:width .32s cubic-bezier(.4,0,.2,1);container-type:inline-size;container-name:app;position:relative;background:var(--bg)}
+.stage-tag{position:absolute;top:0;right:0;z-index:120;background:#1C1C1A;color:#fff;font-size:11px;padding:3px 9px;border-bottom-left-radius:6px}
+
+/* ============================ Sidebar ============================ */
+.app{display:flex;min-height:840px}
+.side{width:232px;flex:0 0 232px;background:#FBFAF8;border-right:1px solid var(--line);display:flex;flex-direction:column;padding:20px 0 16px}
+.side-logo{display:flex;align-items:center;gap:10px;padding:0 20px 20px}
+.side-mark{width:30px;height:30px;border-radius:7px;background:var(--ink);display:flex;align-items:center;justify-content:center;flex:0 0 30px}
+.side-mark i{width:13px;height:13px;border:2px solid #F5F5F3;border-radius:2px;display:block;position:relative}
+.side-mark i::after{content:"";position:absolute;left:2px;top:2px;width:5px;height:5px;background:#F5F5F3;border-radius:50%}
+.side-name{font-size:14.5px;font-weight:600;line-height:1.2}
+.side-sub{font-size:10px;color:var(--muted);letter-spacing:.6px}
+.side-group{padding:0 12px}
+.side-label{font-size:10.5px;color:var(--muted);letter-spacing:.8px;padding:12px 12px 8px;font-weight:600}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;font-size:13.5px;color:var(--fg2);position:relative;transition:background .14s,color .14s;width:100%;text-align:left}
+.nav-item:hover{background:#F1F0EC;color:var(--fg)}
+.nav-item .ico{width:16px;height:16px;flex:0 0 16px;opacity:.75}
+.nav-item.on{background:#EFEEEA;color:var(--ink);font-weight:600}
+.nav-item.on::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2.5px;background:var(--ink);border-radius:0 2px 2px 0}
+.nav-item .cnt{margin-left:auto;font-size:11px;color:var(--muted);background:#ECEBE6;padding:1px 6px;border-radius:999px}
+.nav-item.on .cnt{background:#E2E1DB;color:var(--fg2)}
+.side-recent{flex:1;overflow:hidden;padding-top:8px}
+.recent-item{display:block;width:100%;text-align:left;padding:6px 12px;border-radius:6px;font-size:12.5px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent-item:hover{background:#F1F0EC;color:var(--fg)}
+.recent-item .dot{display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:7px;vertical-align:1.5px}
+.side-foot{padding:12px 12px 0;border-top:1px solid var(--line);margin:0 12px}
+.user{display:flex;align-items:center;gap:10px;padding:8px 0}
+.avatar{width:28px;height:28px;border-radius:50%;flex:0 0 28px;background:linear-gradient(150deg,#5C5647,#2E2B24);color:#fff;font-size:11.5px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.user-name{font-size:12.5px;font-weight:500;line-height:1.25}
+.user-role{font-size:10.5px;color:var(--muted)}
+.side-foot .ghost{width:100%;text-align:left;font-size:12px;color:var(--muted);padding:6px 8px;border-radius:6px}
+.side-foot .ghost:hover{background:#F1F0EC;color:var(--fg)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+
+/* ============================ 通用组件 ============================ */
+.page{padding:32px 32px 40px;flex:1;min-width:0}
+.page-head{display:flex;align-items:flex-end;gap:16px;margin-bottom:24px;flex-wrap:wrap}
+.page-title{font-size:22px;font-weight:600;margin:0;letter-spacing:-.2px}
+.page-sub{font-size:13px;color:var(--fg2);margin:6px 0 0}
+.page-head .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px;border-radius:8px;font-size:13px;font-weight:500;border:1px solid transparent;transition:background .14s,border-color .14s;white-space:nowrap}
+.btn-pri{background:var(--ink);color:#F7F6F2}
+.btn-pri:hover{background:var(--ink-h)}
+.btn-sec{background:var(--panel);color:var(--fg);border-color:var(--line2)}
+.btn-sec:hover{background:#F4F3EF;border-color:#C9C8C1}
+.btn-ghost{background:transparent;color:var(--fg2)}
+.btn-ghost:hover{background:#EFEEEA;color:var(--fg)}
+.btn-danger{background:transparent;color:var(--err);border-color:var(--err-line)}
+.btn-sm{height:28px;padding:0 10px;font-size:12.5px;border-radius:6px}
+.field{height:34px;border:1px solid var(--line2);border-radius:8px;background:#fff;padding:0 12px;font-size:13px;display:inline-flex;align-items:center;gap:8px;min-width:0}
+.field input{border:none;outline:none;font-family:inherit;font-size:13px;color:var(--fg);background:transparent;min-width:0;flex:1}
+.field input::placeholder{color:#A9A79E}
+.field:focus-within{border-color:var(--ink);box-shadow:0 0 0 3px rgba(28,28,26,.06)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{height:28px;padding:0 12px;border-radius:999px;font-size:12.5px;color:var(--fg2);background:#fff;border:1px solid var(--line2);display:inline-flex;align-items:center;gap:6px;transition:all .14s}
+.chip:hover{background:#F4F3EF}
+.chip.on{background:var(--ink);color:#F7F6F2;border-color:var(--ink);font-weight:500}
+.chip .n{opacity:.7;font-size:11.5px}
+.badge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:500}
+.badge .d{width:5px;height:5px;border-radius:50%;background:currentColor}
+.badge-ok{background:var(--ok-bg);color:var(--ok)}
+.badge-warn{background:var(--warn-bg);color:var(--warn)}
+.badge-info{background:var(--info-bg);color:var(--info)}
+.badge-err{background:var(--err-bg);color:var(--err)}
+.badge-gray{background:#EFEEEA;color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.panel-pad{padding:20px}
+.bar{height:5px;border-radius:999px;background:#ECEBE6;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px;background:var(--ink)}
+.bar i.ok{background:var(--ok)}
+.bar i.warn{background:var(--warn)}
+.divider{height:1px;background:var(--line);margin:16px 0}
+.kv{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;padding:3px 0}
+.kv .k{color:var(--muted)}
+.kv .v{font-weight:500}
+.mono{font-family:var(--mono);font-size:12px}
+.select{height:34px;border:1px solid var(--line2);background:#fff;border-radius:8px;padding:0 10px;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+
+/* ============================ 照片占位（渐变 + 颗粒，保持真实比例与构图） ============================ */
+.ph{position:relative;overflow:hidden;background:#3A382F;width:100%;display:block}
+.ph::after{content:"";position:absolute;inset:0;background-image:var(--grain);opacity:.15;mix-blend-mode:overlay;pointer-events:none}
+.k1{background:radial-gradient(40% 32% at 52% 36%,#F2CFAE 0%,rgba(242,207,174,0) 70%),radial-gradient(72% 46% at 50% 98%,#2A2220 0%,rgba(42,34,32,0) 72%),linear-gradient(168deg,#4E4038 0%,#251E1B 56%,#16120F 100%)}
+.k2{background:radial-gradient(30% 22% at 74% 22%,#FFF6DF 0%,rgba(255,246,223,0) 70%),linear-gradient(180deg,#9DBFD2 0%,#C6D6DC 42%,#7E8C74 58%,#3F4739 100%)}
+.k3{background:radial-gradient(46% 40% at 30% 30%,#B9D08A 0%,rgba(185,208,138,0) 68%),linear-gradient(155deg,#6E8A52 0%,#3E5138 55%,#1F2A1D 100%)}
+.k4{background:radial-gradient(26% 18% at 24% 62%,#FFB26B 0%,rgba(255,178,107,0) 72%),radial-gradient(22% 16% at 68% 44%,#8FA8FF 0%,rgba(143,168,255,0) 74%),linear-gradient(170deg,#1B2436 0%,#121826 60%,#0B0E16 100%)}
+.k5{background:radial-gradient(52% 44% at 68% 28%,#FFE1A8 0%,rgba(255,225,168,0) 66%),linear-gradient(140deg,#C79A5E 0%,#8A6338 48%,#3A2A1C 100%)}
+.k6{background:radial-gradient(38% 30% at 44% 40%,#EDEDE8 0%,rgba(237,237,232,0) 68%),linear-gradient(160deg,#6A6A66 0%,#33332F 52%,#131312 100%)}
+.k7{background:radial-gradient(44% 38% at 62% 34%,#FFD9A6 0%,rgba(255,217,166,0) 70%),linear-gradient(150deg,#8A6A48 0%,#54402C 52%,#2A2018 100%)}
+.k8{background:linear-gradient(180deg,#8FB8C9 0%,#B7CFD6 38%,#5E7A80 62%,#2E3F44 100%)}
+.k9{background:radial-gradient(40% 34% at 36% 30%,#FFC978 0%,rgba(255,201,120,0) 70%),linear-gradient(150deg,#B47438 0%,#6E4426 52%,#2C1C12 100%)}
+.k10{background:linear-gradient(180deg,#D8DAD4 0%,#B4B7B0 40%,#7E817A 70%,#4A4C47 100%)}
+.k11{background:radial-gradient(46% 40% at 50% 42%,#FFF3E4 0%,rgba(255,243,228,0) 72%),linear-gradient(165deg,#E8DCCB 0%,#C4B29A 55%,#88786A 100%)}
+.k12{background:linear-gradient(115deg,#8E97A2 0%,#5F6874 40%,#3B424C 70%,#22262C 100%)}
+
+/* ============================ 工作台 ============================ */
+.greet{font-size:24px;font-weight:600;margin:0;letter-spacing:-.3px}
+.greet-sub{font-size:13.5px;color:var(--fg2);margin:6px 0 0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:24px 0 32px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 20px}
+.stat:hover{border-color:var(--line2)}
+.stat-n{font-size:30px;font-weight:600;line-height:1;letter-spacing:-1px}
+.stat-t{font-size:12.5px;color:var(--fg2);margin-top:6px}
+.stat-hint{font-size:11.5px;color:var(--muted);margin-top:2px}
+.sec-title{display:flex;align-items:baseline;gap:12px;margin:0 0 16px}
+.sec-title h3{font-size:16px;font-weight:600;margin:0}
+.sec-title .more{margin-left:auto;font-size:12.5px;color:var(--info)}
+.proj-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.feed{display:flex;flex-direction:column}
+.feed-item{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.feed-item:last-child{border-bottom:none}
+.feed-t{font-size:11.5px;color:var(--muted);width:44px;flex:0 0 44px;padding-top:1px}
+.feed-c{font-size:13px;color:var(--fg2);line-height:1.5}
+.feed-c b{color:var(--fg);font-weight:600}
+.feed-c .tag{font-size:11px;padding:1px 6px;border-radius:999px;margin-left:6px;background:var(--ok-bg);color:var(--ok)}
+.two-col{display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start}
+
+/* ============================ 项目卡片 ============================ */
+.pcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .16s,box-shadow .16s,transform .16s;position:relative;text-align:left;width:100%}
+.pcard:hover{transform:translateY(-2px);box-shadow:var(--sh-3)}
+.pcard:hover .pcover::after{opacity:1}
+.pcard:hover .act{opacity:1}
+.pcover{position:relative;height:132px;background:var(--dark);overflow:hidden;flex:0 0 auto}
+.pcover::after{content:"";position:absolute;inset:0;opacity:0;transition:opacity .16s;background:linear-gradient(180deg,rgba(20,20,18,.42),rgba(20,20,18,0) 55%)}
+.pcover .grid3{display:flex;gap:2px;height:100%}
+.pcover .grid3 .col{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.pcover .grid3 .col.wide{flex:1.45}
+.pcover .grid3 .col .ph{height:50%;flex:1}
+.pcover .cnt{position:absolute;right:8px;bottom:8px;z-index:2;background:rgba(18,18,16,.72);color:#fff;font-size:11px;padding:2px 8px;border-radius:999px}
+.pcover .act{position:absolute;left:8px;top:8px;z-index:2;opacity:0;transition:opacity .16s}
+.pbody{padding:12px 16px 16px}
+.pname{font-size:14.5px;font-weight:600;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pmeta{font-size:12px;color:var(--muted);margin-top:3px}
+.prow{display:flex;align-items:center;gap:8px;margin-top:10px}
+.pmodels{margin-top:10px;display:flex;flex-direction:column;gap:5px}
+.pmline{display:flex;align-items:center;gap:8px;font-size:12.5px}
+.pmline .nm{color:var(--fg2);min-width:34px}
+.pmline .st{margin-left:auto;font-size:11.5px;display:flex;align-items:center;gap:4px}
+.pmline .st i{width:5px;height:5px;border-radius:50%;display:block}
+.st-ok{color:var(--ok)} .st-ok i{background:var(--ok)}
+.st-ing{color:var(--warn)} .st-ing i{background:var(--warn)}
+.st-wait{color:var(--muted)} .st-wait i{background:#C9C8C1}
+.pprog{margin-top:12px}
+.pprog .lbl{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-bottom:5px}
+.pprog .lbl b{color:var(--fg);font-weight:600}
+.toolbar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.toolbar .grow{flex:1}
+.grid-proj{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+
+/* ============================ 项目详情 / 照片墙 ============================ */
+.detail{display:flex;flex:1;min-height:0}
+.dhead{padding:20px 24px;border-bottom:1px solid var(--line);background:#fff;display:flex;align-items:center;gap:16px}
+.dhead .back{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--fg2);font-size:18px;line-height:1}
+.dhead .back:hover{background:#F1F0EC;color:var(--fg)}
+.dhead h1{font-size:19px;font-weight:600;margin:0;letter-spacing:-.2px}
+.dhead .meta{font-size:12.5px;color:var(--muted);margin-top:3px}
+.dhead .ops{margin-left:auto;display:flex;gap:8px;align-items:center}
+.wall-wrap{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg)}
+.wall-bar{height:52px;flex:0 0 52px;display:flex;align-items:center;gap:12px;padding:0 20px;border-bottom:1px solid var(--line);background:#fff}
+.wall-bar .tabs{display:flex;gap:4px;background:#F1F0EC;padding:3px;border-radius:8px}
+.wall-bar .tabs button{height:26px;padding:0 12px;border-radius:6px;font-size:12.5px;color:var(--fg2);display:inline-flex;align-items:center;gap:6px}
+.wall-bar .tabs button .n{opacity:.65;font-size:11.5px}
+.wall-bar .tabs button.on{background:#fff;color:var(--ink);font-weight:600;box-shadow:var(--sh-1)}
+.wall-bar .right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.dens{display:flex;gap:2px}
+.dens button{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.dens button:hover{background:#F1F0EC}
+.dens button.on{background:#EFEEEA;color:var(--ink)}
+.dens button span{display:block;background:currentColor;border-radius:1px}
+.dens .s{width:12px;height:12px}
+.dens .m{width:15px;height:15px}
+.dens .l{width:18px;height:18px}
+.canvas{flex:1;background:var(--dark);padding:20px;overflow-y:auto;overflow-x:hidden;position:relative;max-height:900px}
+.canvas::-webkit-scrollbar{width:8px}
+.canvas::-webkit-scrollbar-thumb{background:#3A3A34;border-radius:4px}
+.canvas::-webkit-scrollbar-track{background:transparent}
+.canvas-head{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.canvas-head .t{font-size:12.5px;color:var(--fg-inv2)}
+.canvas-head .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.chip-d{height:26px;padding:0 11px;border-radius:999px;font-size:12px;color:#C9C7BD;background:var(--dark3);border:1px solid var(--dark-line);display:inline-flex;align-items:center;gap:6px}
+.chip-d.on{background:#F2F1ED;color:#151513;border-color:#F2F1ED;font-weight:600}
+.chip-d .n{opacity:.7;font-size:11px}
+.wall{column-count:4;column-gap:6px}
+.shot{break-inside:avoid;margin:0 0 6px;position:relative;border-radius:4px;overflow:hidden;background:var(--dark2);cursor:pointer;display:block;width:100%;padding:0;border:none}
+.shot .mask{position:absolute;inset:0;opacity:0;transition:opacity .14s;background:linear-gradient(180deg,rgba(12,12,10,.5) 0%,rgba(12,12,10,0) 45%,rgba(12,12,10,.74) 100%);display:flex;flex-direction:column;justify-content:flex-end;padding:10px;pointer-events:none}
+.shot:hover .mask{opacity:1}
+.shot .fn{font-family:var(--mono);font-size:11.5px;color:#F2F1ED;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.shot .who{font-size:11px;color:#9ED8B4;margin-top:3px;display:flex;align-items:center;gap:4px}
+.shot .who.no{color:#B9B7AE}
+.shot .tick{position:absolute;right:8px;top:8px;width:20px;height:20px;border-radius:50%;background:var(--ok);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;z-index:2}
+.shot.sel{outline:2px solid #4CAF7D;outline-offset:-2px}
+.shot.hide{display:none}
+.info{width:288px;flex:0 0 288px;background:#fff;border-left:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+.info-head{height:52px;flex:0 0 52px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid var(--line)}
+.info-head .t{font-size:13.5px;font-weight:600}
+.info-head .collapse{margin-left:auto;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px}
+.info-head .collapse:hover{background:#F1F0EC;color:var(--fg)}
+.info-body{flex:1;overflow-y:auto;padding:16px}
+.info-block{padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+.info-block:last-child{border-bottom:none;margin-bottom:0}
+.info-block h4{font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:.6px;margin:0 0 12px}
+.status-big{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.status-big .nm{font-size:15px;font-weight:600}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.stat-cell{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.stat-cell .v{font-size:17px;font-weight:600;line-height:1.1}
+.stat-cell .l{font-size:11px;color:var(--muted);margin-top:2px}
+.steps{display:flex;flex-direction:column;gap:10px}
+.step{display:flex;align-items:center;gap:10px;font-size:13px}
+.step .ic{width:18px;height:18px;border-radius:50%;flex:0 0 18px;display:flex;align-items:center;justify-content:center;font-size:10px;border:1.5px solid var(--line2);color:var(--muted)}
+.step.done .ic{background:var(--ok);border-color:var(--ok);color:#fff}
+.step.doing .ic{border-color:var(--warn);color:var(--warn)}
+.step.doing .nm{color:var(--fg);font-weight:600}
+.step.wait .nm{color:var(--muted)}
+.step .st{margin-left:auto;font-size:11.5px;color:var(--muted)}
+.step.done .st{color:var(--ok)}
+.step.doing .st{color:var(--warn)}
+.model-row{padding:9px 0}
+.model-row + .model-row{border-top:1px dashed var(--line)}
+.model-row .top{display:flex;align-items:center;gap:8px;font-size:13px}
+.model-row .top .nm{font-weight:500}
+.model-row .top .r{margin-left:auto;font-size:11.5px}
+.model-row .bar{margin-top:7px}
+.model-row .bot{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:5px}
+.info-foot{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px}
+.info-foot .btn{flex:1;justify-content:center}
+.app[data-panel="off"] .info{display:none !important}
+.info-collapsed-btn{position:absolute;right:20px;top:76px;z-index:20;display:none}
+.app[data-panel="off"] .info-collapsed-btn{display:block}
+
+/* ============================ 上传 Drawer ============================ */
+.scrim{position:absolute;inset:0;background:rgba(18,18,16,.34);z-index:40;opacity:0;pointer-events:none;transition:opacity .2s}
+.app[data-drawer="open"] .scrim{opacity:1;pointer-events:auto}
+.drawer{position:absolute;right:0;top:0;bottom:0;width:400px;z-index:50;background:#fff;border-left:1px solid var(--line);transform:translateX(100%);transition:transform .26s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:-8px 0 24px rgba(20,19,16,.08)}
+.app[data-drawer="open"] .drawer{transform:translateX(0)}
+.dr-head{height:56px;flex:0 0 56px;display:flex;align-items:center;gap:12px;padding:0 20px;border-bottom:1px solid var(--line)}
+.dr-head .t{font-size:15px;font-weight:600}
+.dr-head .ops{margin-left:auto;display:flex;gap:2px}
+.dr-head .ops button{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px}
+.dr-head .ops button:hover{background:#F1F0EC;color:var(--fg)}
+.dr-body{flex:1;overflow-y:auto;padding:20px}
+.drop{border:1.5px dashed var(--line2);border-radius:14px;padding:32px 20px;text-align:center;background:var(--panel2);transition:border-color .16s,background .16s}
+.drop:hover{border-color:var(--ink);background:#F4F3EF}
+.drop .ic{width:44px;height:44px;margin:0 auto 12px;border-radius:50%;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--fg2)}
+.drop .t1{font-size:14px;font-weight:500}
+.drop .t2{font-size:12.5px;color:var(--muted);margin-top:5px}
+.drop-note{display:flex;gap:8px;font-size:11.5px;color:var(--muted);margin-top:12px;justify-content:center;flex-wrap:wrap}
+.spec-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.spec{border:1px solid var(--line2);border-radius:8px;padding:10px 12px;text-align:left;background:#fff;transition:all .14s}
+.spec:hover{border-color:#C4C3BB}
+.spec.on{border-color:var(--ink);box-shadow:0 0 0 2px rgba(28,28,26,.07)}
+.spec .n{font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px}
+.spec .n .rec{font-size:10px;background:var(--ok-bg);color:var(--ok);padding:1px 5px;border-radius:999px}
+.spec .v{font-size:11.5px;color:var(--muted);margin-top:3px}
+.up-list{display:flex;flex-direction:column;gap:1px;margin-top:12px}
+.up-item{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:6px;font-size:12.5px}
+.up-item:hover{background:var(--panel2)}
+.up-item .fn{font-family:var(--mono);font-size:11.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.up-item .st{font-size:11.5px;display:flex;align-items:center;gap:4px}
+.up-item .retry{font-size:11.5px;color:var(--info);text-decoration:underline}
+.dr-foot{flex:0 0 auto;padding:16px 20px;border-top:1px solid var(--line);background:var(--panel2)}
+.dr-foot .top{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px}
+.mini-bar{position:absolute;left:20px;right:20px;bottom:20px;z-index:45;background:var(--ink);color:#F2F1ED;border-radius:8px;padding:10px 16px;display:none;align-items:center;gap:12px;box-shadow:var(--sh-3)}
+.app[data-drawer="min"] .mini-bar{display:flex}
+.mini-bar .t{font-size:12.5px;font-weight:500}
+.mini-bar .bar{flex:1;background:#46453F}
+.mini-bar .bar i{background:#8FD3A8}
+.mini-bar .n{font-size:12px;color:#C9C7BD}
+.mini-bar button{font-size:11.5px;color:#C9C7BD;padding:3px 8px;border-radius:6px}
+.mini-bar button:hover{background:#2E2E29;color:#fff}
+
+/* ============================ Lightbox ============================ */
+.lb{position:absolute;inset:0;z-index:90;background:rgba(9,9,8,.975);display:none;flex-direction:column;color:#EDEDE8}
+.app[data-lb="on"] .lb{display:flex}
+.lb-top{height:56px;flex:0 0 56px;display:flex;align-items:center;padding:0 20px;border-bottom:1px solid rgba(255,255,255,.07)}
+.lb-top .fn{font-family:var(--mono);font-size:13.5px}
+.lb-top .idx{margin-left:16px;font-size:12.5px;color:#8E8C84}
+.lb-top .ops{margin-left:auto;display:flex;align-items:center;gap:8px}
+.lb-btn{height:30px;padding:0 12px;border-radius:8px;font-size:12.5px;color:#C9C7BD;border:1px solid rgba(255,255,255,.14);display:inline-flex;align-items:center;gap:6px}
+.lb-btn:hover{background:#222220;color:#fff}
+.lb-btn.on{background:#F2F1ED;color:#151513;border-color:#F2F1ED;font-weight:600}
+.lb-stage{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.lb-stage .holder{transition:transform .1s ease-out;will-change:transform}
+.lb-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(28,28,26,.6);color:#EDEDE8;display:flex;align-items:center;justify-content:center;font-size:20px;z-index:3}
+.lb-nav:hover{background:rgba(48,48,44,.9)}
+.lb-nav.prev{left:20px}
+.lb-nav.next{right:20px}
+.lb-foot{height:56px;flex:0 0 56px;display:flex;align-items:center;gap:16px;padding:0 20px;border-top:1px solid rgba(255,255,255,.07);font-size:12px;color:#8E8C84}
+.lb-foot .kbd{font-family:var(--mono);font-size:11px;background:#222220;border:1px solid #3A3A34;border-radius:4px;padding:1px 6px;color:#C9C7BD;margin-right:2px}
+.lb-foot .r{margin-left:auto;display:flex;align-items:center;gap:12px}
+.zoom-ctl{display:flex;align-items:center;gap:2px}
+.zoom-ctl button{width:28px;height:28px;border-radius:6px;color:#C9C7BD;display:flex;align-items:center;justify-content:center}
+.zoom-ctl button:hover{background:#222220;color:#fff}
+.zoom-ctl .v{font-size:12px;color:#8E8C84;width:44px;text-align:center}
+
+/* ============================ 选片结果 ============================ */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:.4px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--sunken);white-space:nowrap}
+.tbl td{padding:11px 16px;border-bottom:1px solid var(--line)}
+.tbl tbody tr:hover{background:var(--panel2)}
+.tbl .idx{color:var(--muted);width:56px}
+.tbl .fn{font-family:var(--mono);font-size:12.5px}
+.tbl .who{width:120px}
+.tbl .tm{color:var(--muted);font-size:12.5px;width:130px}
+.tbl .op{width:80px;text-align:right}
+.result-head{display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.result-head .t{font-size:19px;font-weight:600;letter-spacing:-.2px}
+.result-head .ops{margin-left:auto;display:flex;gap:8px}
+.preview-box{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-family:var(--mono);font-size:11.5px;color:var(--fg2);white-space:pre-wrap;line-height:1.9;margin-top:16px}
+
+/* ============================ 登录页 ============================ */
+.login-wrap{background:var(--bg);min-height:840px;display:flex;align-items:center;justify-content:center;padding:40px}
+.login-card{width:400px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:40px 32px;box-shadow:var(--sh-1)}
+.login-t{text-align:center;font-size:18px;font-weight:600}
+.login-s{text-align:center;font-size:12.5px;color:var(--muted);margin-top:6px}
+.qr-box{width:196px;height:196px;margin:24px auto 0;border:1px solid var(--line);border-radius:14px;padding:10px;background:#fff;position:relative}
+.qr-inner{width:100%;height:100%;position:relative;overflow:hidden;background:#fff;border-radius:6px}
+.qr-inner .code{position:absolute;inset:12px;background-image:var(--grain);background-size:46px 46px;opacity:.92}
+.qr-corner{position:absolute;width:34px;height:34px;border:3.5px solid #1A1A18;border-radius:4px}
+.qr-corner.a{left:12px;top:12px;border-right:none;border-bottom:none}
+.qr-corner.b{right:12px;top:12px;border-left:none;border-bottom:none}
+.qr-corner.c{left:12px;bottom:12px;border-right:none;border-top:none}
+.qr-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;background:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center}
+.qr-center i{width:22px;height:22px;border-radius:4px;background:var(--ink);display:block}
+.qr-expired{position:absolute;inset:0;background:rgba(255,255,255,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.login-hint{text-align:center;font-size:13px;color:var(--fg2);margin-top:20px}
+.login-hint .exp{font-size:11.5px;color:var(--muted);margin-top:6px}
+.login-foot{text-align:center;font-size:11.5px;color:var(--muted);margin-top:32px;padding-top:20px;border-top:1px solid var(--line);line-height:1.7}
+
+/* ============================ Toast ============================ */
+.toast{position:absolute;left:50%;bottom:32px;transform:translateX(-50%) translateY(12px);background:var(--ink);color:#F5F4F0;font-size:13px;padding:10px 18px;border-radius:8px;z-index:150;opacity:0;pointer-events:none;transition:all .2s;box-shadow:var(--sh-3)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ============================ 状态展示区 ============================ */
+.state-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.state-card{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.state-card .hd{padding:10px 16px;border-bottom:1px solid var(--line);font-size:12px;font-weight:600;color:var(--fg2);background:var(--panel2);display:flex;align-items:center;gap:8px}
+.state-card .hd .tag{font-size:10.5px;font-weight:500;padding:1px 6px;border-radius:999px;background:#EFEEEA;color:var(--muted)}
+.state-card .bd{padding:24px 16px;min-height:200px;display:flex;flex-direction:column}
+.empty{text-align:center;margin:auto;padding:24px 16px}
+.empty .ic{width:56px;height:56px;border-radius:14px;margin:0 auto 16px;background:var(--panel2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:22px;color:#B9B7AE}
+.empty .t{font-size:14.5px;font-weight:600}
+.empty .d{font-size:12.5px;color:var(--muted);margin-top:6px;max-width:280px;margin-left:auto;margin-right:auto;line-height:1.6}
+.empty .btn{margin-top:16px}
+.sk{background:#EDECE8;border-radius:6px;position:relative;overflow:hidden}
+.sk::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.62),rgba(255,255,255,0));animation:shimmer 1.4s infinite}
+@keyframes shimmer{100%{transform:translateX(100%)}}
+.sk-line{height:12px;margin-bottom:10px}
+.sk-dark{background:#2A2A26}
+.sk-dark::after{background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.07),rgba(255,255,255,0))}
+.err-box{text-align:center;margin:auto;padding:20px 16px}
+.err-box .ic{width:44px;height:44px;border-radius:50%;margin:0 auto 12px;background:var(--err-bg);color:var(--err);display:flex;align-items:center;justify-content:center;font-size:18px}
+.err-box .t{font-size:14px;font-weight:600}
+.err-box .d{font-size:12.5px;color:var(--muted);margin-top:5px;line-height:1.6}
+.err-box .btn{margin-top:16px}
+.err-inline{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:var(--err-bg);border:1px solid var(--err-line);font-size:12.5px;color:#8A2E27}
+.err-inline .btn{margin-left:auto}
+.matrix{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.mx{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px}
+.mx .lb2{font-size:11.5px;color:var(--muted);margin-bottom:10px}
+.mx p{font-size:11px;color:#8A897F;margin:10px 0 0;line-height:1.6}
+
+/* ============================================================
+   CONTAINER QUERIES —— 真正响应预览容器宽度（不是整体缩放）
+   ============================================================ */
+@container app (max-width:1279px){
+  .side{width:212px;flex-basis:212px}
+  .page{padding:24px 24px 32px}
+}
+@container app (max-width:1099px){
+  .side{width:200px;flex-basis:200px}
+  .side-recent{display:none}
+  .page{padding:20px 20px 32px}
+  .stats{gap:12px}
+  .stat{padding:12px 16px}
+  .stat-n{font-size:26px}
+  .dhead{padding:16px 20px}
+  .dhead h1{font-size:17px}
+  .dhead .ops .lbl{display:none}
+  .dhead .ops .btn{padding:0 10px}
+}
+@container app (max-width:1023px){
+  .side{width:68px;flex-basis:68px;padding-left:0;padding-right:0}
+  .side-logo{justify-content:center;padding:0 0 20px}
+  .side-name,.side-sub,.nav-item .t,.side-label,.recent-item,.nav-item .cnt,.user-name,.user-role,.side-foot .ghost span{display:none}
+  .nav-item{justify-content:center;padding:9px 0}
+  .nav-item .ico{margin:0}
+  .user{justify-content:center}
+  .side-group{padding:0 8px}
+  .side-foot{margin:0 8px}
+}
+@container app (min-width:1700px){ .proj-row{grid-template-columns:repeat(4,1fr)} }
+@container app (max-width:1500px){ .proj-row{grid-template-columns:repeat(3,1fr)} }
+@container app (max-width:1200px){ .proj-row{grid-template-columns:repeat(2,1fr)} }
+@container app (min-width:1700px){ .two-col{grid-template-columns:1fr 380px} }
+@container app (max-width:1099px){ .two-col{grid-template-columns:1fr} }
+@container app (min-width:1760px){ .grid-proj{grid-template-columns:repeat(5,1fr)} }
+@container app (min-width:1560px){ .grid-proj{grid-template-columns:repeat(4,1fr)} }
+@container app (max-width:1299px){ .grid-proj{grid-template-columns:repeat(2,1fr);gap:16px} }
+.wall[data-d="m"]{column-count:4}
+.wall[data-d="s"]{column-count:6}
+.wall[data-d="l"]{column-count:3}
+@container app (min-width:1700px){
+  .wall[data-d="m"]{column-count:5}
+  .wall[data-d="s"]{column-count:7}
+  .wall[data-d="l"]{column-count:4}
+}
+@container app (min-width:1900px){
+  .wall[data-d="m"]{column-count:6}
+  .wall[data-d="s"]{column-count:8}
+  .wall[data-d="l"]{column-count:4}
+}
+@container app (max-width:1350px){
+  .wall[data-d="m"]{column-count:3}
+  .wall[data-d="s"]{column-count:4}
+  .wall[data-d="l"]{column-count:2}
+}
+@container app (max-width:1023px){
+  .wall[data-d="m"]{column-count:2}
+  .wall[data-d="s"]{column-count:3}
+  .wall[data-d="l"]{column-count:2}
+}
+@container app (max-width:1180px){ .info{width:250px;flex-basis:250px} }
+@container app (max-width:1099px){ .info{display:none !important} }
+@container app (max-width:1279px){ .drawer{width:360px} }
+@container app (max-width:1023px){ .drawer{width:340px} }
+
+@media (max-width:1500px){ .state-grid{grid-template-columns:repeat(2,1fr)} .matrix{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:900px){ .state-grid{grid-template-columns:1fr} .matrix{grid-template-columns:1fr} .ds-nav{display:none} }
+.stage-scroll::-webkit-scrollbar{height:8px}
+.stage-scroll::-webkit-scrollbar-thumb{background:#C9C8C1;border-radius:4px}
+.info-body::-webkit-scrollbar,.dr-body::-webkit-scrollbar{width:6px}
+.info-body::-webkit-scrollbar-thumb,.dr-body::-webkit-scrollbar-thumb{background:#DCDCD6;border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="ds-bar">
+  <div class="ds-brand">摄影线上选片平台 · Web 摄影师控制台 <em>UI 2.0 设计稿</em></div>
+  <div class="ds-nav">
+    <a href="#s1">1 设计语言</a>
+    <a href="#s2">2 登录</a>
+    <a href="#s3">3 工作台</a>
+    <a href="#s4">4 项目列表</a>
+    <a href="#s5">5 照片墙</a>
+    <a href="#s6">6 上传</a>
+    <a href="#s7">7 大图</a>
+    <a href="#s8">8 选片结果</a>
+    <a href="#s9">9 状态区</a>
+  </div>
+  <div class="ds-spacer"></div>
+  <div class="ds-vp">
+    <span>预览宽度</span>
+    <button data-vp="1920">1920</button>
+    <button data-vp="1440" class="on">1440</button>
+    <button data-vp="1366">1366</button>
+    <button data-vp="1280">1280</button>
+    <button data-vp="1024">1024</button>
+  </div>
+</div>
+
+<div class="ds-wrap">
+
+<p class="ds-note">
+  这是<b>视觉评审稿</b>与<b>后续编码依据</b>，不含业务逻辑。预览容器宽度由右上角按钮切换 ——
+  <b>侧边栏宽度、项目卡列数、照片墙列数、右侧信息栏折叠</b>全部通过容器查询（Container Query）真实响应，不是整体缩放，默认 1440px。
+  照片占位使用「渐变 + 颗粒纹理」模拟真实照片色调与横竖构图，接真实图片时把 <span class="mono">.ph</span> 换成 <span class="mono">img</span> 即可。
+  页面内部可点击切换：工作台 / 项目 / 项目详情 / 选片结果，并可打开上传抽屉、大图预览、折叠信息栏。
+</p>
+
+<div class="stage-outer">
+<div class="stage-scroll">
+<div class="stage" id="stage" style="width:1440px">
+<div class="stage-tag" id="stageTag">1440 px</div>
+<div class="app" id="app" data-view="detail" data-panel="on" data-drawer="closed" data-lb="off">
+
+<aside class="side">
+  <div class="side-logo">
+    <div class="side-mark"><i></i></div>
+    <div>
+      <div class="side-name">银盐定片</div>
+      <div class="side-sub">Photo Select</div>
+    </div>
+  </div>
+  <div class="side-group">
+    <button class="nav-item" data-go="dash">
+      <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+      <span class="t">工作台</span>
+    </button>
+    <button class="nav-item on" data-go="projects">
+      <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M2 6.5h12M6 3v10"/></svg>
+      <span class="t">项目</span><span class="cnt">5</span>
+    </button>
+  </div>
+  <div class="side-group side-recent">
+    <div class="side-label">最近项目</div>
+    <button class="recent-item" data-go="detail"><span class="dot" style="background:#9A6B00"></span>小王 · 3月外景写真</button>
+    <button class="recent-item" data-go="detail"><span class="dot" style="background:#2F7D4F"></span>小周 · 城市夜景胶片</button>
+    <button class="recent-item" data-go="detail"><span class="dot" style="background:#3A5FA8"></span>春日和服 · 京都旅拍</button>
+    <button class="recent-item" data-go="detail"><span class="dot" style="background:#8A897F"></span>城市扫街 · 2026 春</button>
+  </div>
+  <div class="side-group">
+    <div class="side-label">&nbsp;</div>
+    <button class="nav-item" data-go="dash">
+      <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="2.4"/><path d="M8 1.6v2M8 12.4v2M1.6 8h2M12.4 8h2"/></svg>
+      <span class="t">设置</span>
+    </button>
+  </div>
+  <div class="side-foot">
+    <div class="user">
+      <div class="avatar">番</div>
+      <div><div class="user-name">番茄摄影师</div><div class="user-role">已认证</div></div>
+    </div>
+    <button class="ghost"><span>退出登录</span></button>
+  </div>
+</aside>
+
+<div class="main">
+
+  <!-- ============ 登录 ============ -->
+  <div class="view" id="v-login" hidden>
+    <div class="login-wrap">
+      <div class="login-card">
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:24px">
+          <div class="side-mark" style="width:36px;height:36px;flex:0 0 36px;border-radius:9px"><i style="width:16px;height:16px"></i></div>
+        </div>
+        <div class="login-t">摄影选片</div>
+        <div class="login-s">摄影师工作台 · 微信扫码登录</div>
+        <div class="qr-box">
+          <div class="qr-inner">
+            <div class="code"></div>
+            <div class="qr-corner a"></div><div class="qr-corner b"></div><div class="qr-corner c"></div>
+            <div class="qr-center"><i></i></div>
+          </div>
+        </div>
+        <div class="login-hint">请用微信扫一扫<div class="exp">二维码 5 分钟内有效，过期将自动刷新</div></div>
+        <div class="login-foot">扫码后自动绑定摄影师身份<br>手机端选片请用微信小程序</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 工作台 ============ -->
+  <div class="view" id="v-dash" hidden>
+    <div class="page">
+      <div class="greet">上午好，番茄摄影师</div>
+      <p class="greet-sub">今天有 3 个项目需要处理，1 个项目即将到期</p>
+      <div class="stats">
+        <div class="stat"><div><div class="stat-n">4</div><div class="stat-t">进行中的项目</div><div class="stat-hint">2 个在选片，1 个在上传</div></div></div>
+        <div class="stat"><div><div class="stat-n">2</div><div class="stat-t">待处理选片</div><div class="stat-hint">小周已提交，等你确认</div></div></div>
+        <div class="stat"><div><div class="stat-n" style="color:var(--warn)">1</div><div class="stat-t">即将到期</div><div class="stat-hint">小王 · 3月外景写真 剩 8 天</div></div></div>
+      </div>
+      <div class="sec-title"><h3>最近项目</h3><button class="more" data-go="projects">查看全部 5 个项目 →</button></div>
+      <div class="proj-row" id="dashProjects"></div>
+      <div class="sec-title" style="margin-top:40px"><h3>最近动态</h3></div>
+      <div class="two-col">
+        <div class="card panel-pad">
+          <div class="feed">
+            <div class="feed-item"><div class="feed-t">10:32</div><div class="feed-c"><b>小周</b> 提交了选片 · 24 张<span class="tag">已提交</span></div></div>
+            <div class="feed-item"><div class="feed-t">09:41</div><div class="feed-c"><b>小王</b> 选择了 3 张照片</div></div>
+            <div class="feed-item"><div class="feed-t">09:12</div><div class="feed-c"><b>小周</b> 打开了选片链接</div></div>
+            <div class="feed-item"><div class="feed-t">昨天</div><div class="feed-c">你上传了 <b>48 张</b> 照片到「小王 · 3月外景写真」</div></div>
+            <div class="feed-item"><div class="feed-t">昨天</div><div class="feed-c">你邀请了 <b>小王</b> 加入选片</div></div>
+            <div class="feed-item"><div class="feed-t">10-03</div><div class="feed-c">项目「<b>春日和服 · 京都旅拍</b>」创建成功</div></div>
+          </div>
+        </div>
+        <div class="card panel-pad">
+          <h4 style="margin:0 0 12px;font-size:13px;font-weight:600">下一步建议</h4>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <span class="badge badge-warn" style="flex:0 0 auto"><span class="d"></span>待处理</span>
+              <div style="font-size:13px;line-height:1.6">小周已提交选片，去确认并导出文件名清单</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <span class="badge badge-info" style="flex:0 0 auto"><span class="d"></span>可操作</span>
+              <div style="font-size:13px;line-height:1.6">「春日和服」还有 120 张未上传完成</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <span class="badge badge-gray" style="flex:0 0 auto"><span class="d"></span>提醒</span>
+              <div style="font-size:13px;line-height:1.6">「小王 · 3月外景写真」剩 8 天，记得续期</div>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <button class="btn btn-sec" style="width:100%;justify-content:center" data-go="result">去处理待确认的选片</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 项目列表 ============ -->
+  <div class="view" id="v-projects">
+    <div class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">项目</h1>
+          <p class="page-sub">共 5 个项目 · 2 个正在选片</p>
+        </div>
+        <div class="right">
+          <button class="btn btn-sec" id="btnToggleEmpty">演示空状态</button>
+          <button class="btn btn-pri">＋ 新建项目</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="field" style="width:260px">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#8A897F" stroke-width="1.5"><circle cx="7" cy="7" r="4.6"/><path d="M10.5 10.5L14 14"/></svg>
+          <input placeholder="搜索项目名称" id="projSearch">
+        </div>
+        <div class="chips" id="statusChips">
+          <button class="chip on">全部 <span class="n">5</span></button>
+          <button class="chip">进行中 <span class="n">4</span></button>
+          <button class="chip">待处理 <span class="n">2</span></button>
+          <button class="chip">已完成 <span class="n">1</span></button>
+          <button class="chip">已归档 <span class="n">1</span></button>
+        </div>
+        <div class="grow"></div>
+        <div class="select"><span style="color:#8A897F;font-size:12.5px">排序</span><span>最近更新</span>
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"/></svg>
+        </div>
+      </div>
+      <div class="grid-proj" id="projGrid"></div>
+    </div>
+  </div>
+
+  <!-- ============ 项目详情 / 照片墙 ============ -->
+  <div class="view" id="v-detail" hidden style="display:flex;flex:1;min-height:0">
+    <div class="detail" style="flex:1;min-width:0">
+      <div class="wall-wrap">
+        <div class="dhead">
+          <button class="back" data-go="projects">‹</button>
+          <div>
+            <h1>小王 · 3月外景写真</h1>
+            <div class="meta">48 张照片 · 2 位模特 · 创建于 09-21 · 存续至 10-21</div>
+          </div>
+          <div class="ops">
+            <span class="badge badge-warn"><span class="d"></span>选片中</span>
+            <button class="btn btn-pri" id="btnUpload">↑ <span class="lbl">上传照片</span></button>
+            <button class="btn btn-sec" id="btnInvite">邀请模特</button>
+            <button class="btn btn-ghost btn-sm">⋯</button>
+          </div>
+        </div>
+        <div class="wall-bar">
+          <div class="tabs" id="wallTabs">
+            <button class="on" data-f="all">全部 <span class="n">48</span></button>
+            <button data-f="sel">已选 <span class="n">18</span></button>
+            <button data-f="un">未选 <span class="n">30</span></button>
+          </div>
+          <div class="right">
+            <div class="field" style="height:28px;width:190px">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#8A897F" stroke-width="1.5"><circle cx="7" cy="7" r="4.6"/><path d="M10.5 10.5L14 14"/></svg>
+              <input placeholder="搜索 DSC01023" id="wallSearch" style="font-size:12.5px">
+            </div>
+            <div class="dens" id="dens">
+              <button data-d="s" title="小"><span class="s"></span></button>
+              <button data-d="m" class="on" title="中"><span class="m"></span></button>
+              <button data-d="l" title="大"><span class="l"></span></button>
+            </div>
+            <div class="select" style="height:28px;font-size:12.5px"><span>默认排序</span>
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"/></svg>
+            </div>
+            <button class="btn btn-sec btn-sm" id="btnPanel"><span id="panelLabel">收起信息栏</span></button>
+          </div>
+        </div>
+        <div class="canvas">
+          <div class="canvas-head">
+            <span class="t" id="wallCount">48 张 · 已选 18</span>
+            <div class="r">
+              <span class="chip-d on">全部</span>
+              <span class="chip-d">小周 <span class="n">10</span></span>
+              <span class="chip-d">小王 <span class="n">8</span></span>
+            </div>
+          </div>
+          <div class="wall" id="wall" data-d="m"></div>
+          <button class="info-collapsed-btn btn btn-sec btn-sm" id="btnPanel2">展开信息栏 ›</button>
+        </div>
+      </div>
+
+      <aside class="info">
+        <div class="info-head">
+          <span class="t">项目信息</span>
+          <button class="collapse" id="btnPanelCollapse">›</button>
+        </div>
+        <div class="info-body">
+          <div class="info-block">
+            <h4>项目状态</h4>
+            <div class="status-big">
+              <span class="badge badge-warn"><span class="d"></span>选片中</span>
+              <span class="nm">剩余 8 天</span>
+            </div>
+            <div class="stat-grid">
+              <div class="stat-cell"><div class="v">48</div><div class="l">照片</div></div>
+              <div class="stat-cell"><div class="v">18</div><div class="l">已选</div></div>
+              <div class="stat-cell"><div class="v">2</div><div class="l">模特</div></div>
+            </div>
+            <div style="margin-top:12px">
+              <div class="kv"><span class="k">套餐上限</span><span class="v">不限</span></div>
+              <div class="kv"><span class="k">画质规格</span><span class="v">标准 1600 / 0.75</span></div>
+              <div class="kv"><span class="k">已用空间</span><span class="v">248 MB</span></div>
+            </div>
+            <button class="btn btn-sec btn-sm" style="width:100%;justify-content:center;margin-top:12px">续期 30 天</button>
+          </div>
+          <div class="info-block">
+            <h4>项目进度</h4>
+            <div class="steps">
+              <div class="step done"><span class="ic">✓</span><span class="nm">上传照片</span><span class="st">完成</span></div>
+              <div class="step doing"><span class="ic">●</span><span class="nm">模特选片</span><span class="st">进行中</span></div>
+              <div class="step wait"><span class="ic">○</span><span class="nm">确认结果</span><span class="st">待处理</span></div>
+              <div class="step wait"><span class="ic">○</span><span class="nm">导出清单</span><span class="st">待处理</span></div>
+            </div>
+          </div>
+          <div class="info-block">
+            <h4>模特（2）</h4>
+            <div class="model-row">
+              <div class="top"><span class="nm">小周</span><span class="r st-ok">已提交</span></div>
+              <div class="bar"><i class="ok" style="width:100%"></i></div>
+              <div class="bot"><span>已选 10 张</span><span>10-05 10:32</span></div>
+            </div>
+            <div class="model-row">
+              <div class="top"><span class="nm">小王</span><span class="r st-ing">选片中</span></div>
+              <div class="bar"><i class="warn" style="width:42%"></i></div>
+              <div class="bot"><span>已选 8 张</span><span>09:41 更新</span></div>
+            </div>
+            <button class="btn btn-sec btn-sm" style="width:100%;justify-content:center;margin-top:12px">＋ 邀请模特</button>
+          </div>
+          <div class="info-block">
+            <h4>最近动态</h4>
+            <div class="feed">
+              <div class="feed-item"><div class="feed-t">10:32</div><div class="feed-c"><b>小周</b> 提交了选片</div></div>
+              <div class="feed-item"><div class="feed-t">09:41</div><div class="feed-c"><b>小王</b> 选择了 3 张</div></div>
+              <div class="feed-item"><div class="feed-t">昨天</div><div class="feed-c">你上传了 48 张照片</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="info-foot">
+          <button class="btn btn-sec btn-sm" data-go="result">查看结果</button>
+          <button class="btn btn-sec btn-sm">项目设置</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ============ 选片结果 ============ -->
+  <div class="view" id="v-result" hidden>
+    <div class="page">
+      <div class="result-head">
+        <div>
+          <div class="t">文件名清单</div>
+          <p class="page-sub" style="margin-top:4px">小王 · 3月外景写真 · 已确认 18 张</p>
+        </div>
+        <div class="ops">
+          <button class="btn btn-sec" id="btnCopy">复制全部</button>
+          <button class="btn btn-pri">导出 TXT</button>
+        </div>
+      </div>
+      <div class="chips" id="resultChips" style="margin-bottom:20px">
+        <button class="chip on">全部 <span class="n">18</span></button>
+        <button class="chip">小周 <span class="n">10</span></button>
+        <button class="chip">小王 <span class="n">8</span></button>
+      </div>
+      <div class="card" style="overflow:hidden">
+        <table class="tbl"><thead><tr><th>#</th><th>文件名</th><th>选择人</th><th>时间</th><th></th></tr></thead><tbody id="resultBody"></tbody></table>
+      </div>
+      <div class="preview-box">复制结果预览：
+DSC01012.JPG
+DSC01014.JPG
+DSC01019.JPG
+DSC01023.JPG
+…共 18 行，可直接粘进 Lightroom 筛选栏</div>
+      <p style="font-size:12.5px;color:#8A897F;margin-top:16px;line-height:1.7">
+        复制全部：每行一个文件名，按文件名升序 · 导出 TXT：UTF-8 带 BOM，Excel 打开不乱码<br>
+        拿到清单后回到 Lightroom，用「按文件名筛选」定位对应 RAW 即可开始精修。
+      </p>
+    </div>
+  </div>
+
+  <!-- ============ 上传 Drawer ============ -->
+  <div class="scrim" id="scrim"></div>
+  <div class="drawer">
+    <div class="dr-head">
+      <span class="t">上传照片</span>
+      <span class="badge badge-gray">小王 · 3月外景写真</span>
+      <div class="ops">
+        <button id="btnMin" title="最小化">—</button>
+        <button id="btnCloseDrawer" title="关闭">✕</button>
+      </div>
+    </div>
+    <div class="dr-body">
+      <div class="drop">
+        <div class="ic">↑</div>
+        <div class="t1">把照片文件夹拖到这里</div>
+        <div class="t2">或者</div>
+        <button class="btn btn-sec btn-sm" style="margin-top:12px">选择文件夹</button>
+        <div class="drop-note"><span>只读取 JPG</span><span>·</span><span>RAW（ARW / CR2 / NEF）自动跳过</span></div>
+      </div>
+      <div style="margin-top:24px">
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:10px">上传规格</div>
+        <div class="spec-grid" id="specGrid">
+          <button class="spec on"><div class="n">标准 <span class="rec">推荐</span></div><div class="v">1600 px / 0.75</div></button>
+          <button class="spec"><div class="n">高清</div><div class="v">2048 px / 0.82</div></button>
+          <button class="spec"><div class="n">高清 Pro</div><div class="v">2880 px / 0.90</div></button>
+          <button class="spec"><div class="n">原画质</div><div class="v">4096 px / 0.92</div></button>
+        </div>
+        <p style="font-size:11.5px;color:#8A897F;margin:10px 0 0;line-height:1.6">
+          画质是上传时的选择，决定模特看到的预览清晰度。原图（RAW）始终保留在你本地，不会上传。
+        </p>
+      </div>
+      <div style="margin-top:24px">
+        <div style="display:flex;align-items:center;margin-bottom:8px">
+          <span style="font-size:12.5px;font-weight:600">上传队列</span>
+          <span style="margin-left:auto;font-size:11.5px;color:#8A897F">并发 3 · 失败自动重试 3 次</span>
+        </div>
+        <div class="up-list">
+          <div class="up-item"><span class="fn">DSC02001.JPG</span><span class="st" style="color:#2F7D4F">✓ 完成</span></div>
+          <div class="up-item"><span class="fn">DSC02002.JPG</span><span class="st" style="color:#2F7D4F">✓ 完成</span></div>
+          <div class="up-item"><span class="fn">DSC02003.JPG</span><span class="st" style="color:#9A6B00">↑ 上传中</span></div>
+          <div class="up-item"><span class="fn">DSC02004.JPG</span><span class="st" style="color:#B03A32">× 失败</span><span class="retry">重试</span></div>
+          <div class="up-item"><span class="fn" style="color:#8A897F">其余 44 张</span><span class="st" style="color:#8A897F">排队中</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="dr-foot">
+      <div class="top"><span>正在上传</span><span><b>15</b> / 48</span></div>
+      <div class="bar"><i style="width:31%"></i></div>
+    </div>
+  </div>
+
+  <div class="mini-bar">
+    <span class="t">上传中</span>
+    <span class="n">15 / 48</span>
+    <div class="bar"><i style="width:31%"></i></div>
+    <button id="btnRestore">展开</button>
+  </div>
+
+  <!-- ============ 大图 Lightbox ============ -->
+  <div class="lb" id="lb">
+    <div class="lb-top">
+      <span class="fn" id="lbFn">DSC01023.JPG</span>
+      <span class="idx" id="lbIdx">23 / 48</span>
+      <span class="badge badge-ok" id="lbSel" style="margin-left:12px"><span class="d"></span>已选</span>
+      <div class="ops">
+        <button class="lb-btn on" id="lbMark">✓ 已选</button>
+        <button class="lb-btn" id="lbClose">✕ 关闭 ESC</button>
+      </div>
+    </div>
+    <div class="lb-stage" id="lbStage">
+      <button class="lb-nav prev" id="lbPrev">‹</button>
+      <div class="holder" id="lbHolder">
+        <div class="ph k5" id="lbImg" style="width:520px;height:346px;border-radius:2px;box-shadow:0 12px 48px rgba(0,0,0,.6)"></div>
+      </div>
+      <button class="lb-nav next" id="lbNext">›</button>
+    </div>
+    <div class="lb-foot">
+      <span><span class="kbd">←</span><span class="kbd">→</span> 切换</span>
+      <span><span class="kbd">ESC</span> 关闭</span>
+      <span>滚轮缩放 · 按住拖动</span>
+      <div class="r">
+        <div class="zoom-ctl">
+          <button id="zoomOut">−</button><span class="v" id="zoomV">100%</span><button id="zoomIn">＋</button>
+        </div>
+        <button class="lb-btn" id="zoomReset">适应窗口</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">已复制 18 个文件名</div>
+
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ==================== SECTION 1 · Design Tokens ==================== -->
+<div class="ds-sec" id="s1">
+  <div class="ds-sec-head"><span class="idx">SECTION 1</span><h2>Design Tokens</h2><p>克制 · 专业 · 摄影感 · 无渐变无玻璃拟态无厚重阴影</p></div>
+
+  <div class="state-grid" style="margin-bottom:24px">
+    <div class="state-card">
+      <div class="hd">色彩 · 页面与面板</div>
+      <div class="bd">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:38px;height:38px;border-radius:8px;background:#F5F5F3;border:1px solid #E5E4DF;flex:0 0 38px"></span>
+            <div><div style="font-size:12.5px;font-weight:600">--bg 页面底</div><div class="mono" style="color:#8A897F">#F5F5F3 暖灰白</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:38px;height:38px;border-radius:8px;background:#FFFFFF;border:1px solid #E5E4DF;flex:0 0 38px"></span>
+            <div><div style="font-size:12.5px;font-weight:600">--panel 卡片</div><div class="mono" style="color:#8A897F">#FFFFFF</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:38px;height:38px;border-radius:8px;background:#1C1C1A;flex:0 0 38px"></span>
+            <div><div style="font-size:12.5px;font-weight:600">--ink 主色 / 主按钮</div><div class="mono" style="color:#8A897F">#1C1C1A 墨黑</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:38px;height:38px;border-radius:8px;background:#151513;flex:0 0 38px"></span>
+            <div><div style="font-size:12.5px;font-weight:600">--dark 照片工作区</div><div class="mono" style="color:#8A897F">#151513 深炭</div></div>
+          </div>
+        </div>
+        <p style="font-size:11.5px;color:#8A897F;margin:14px 0 0;line-height:1.7">浅色管理页面 + 深色照片工作区。管理区负责信息效率，深色区让照片成为唯一视觉主体。</p>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">色彩 · 文字与线条</div>
+      <div class="bd">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between"><span style="font-size:15px;font-weight:500">主文字 标题 / 文件名</span><span class="mono" style="color:#8A897F">#1A1A18</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:#55544E">次要文字 正文</span><span class="mono" style="color:#8A897F">#55544E</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:#8A897F">辅助 / 时间戳 / 说明</span><span class="mono" style="color:#8A897F">#8A897F</span></div>
+          <div style="height:1px;background:#E5E4DF;margin:4px 0"></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-size:12.5px;color:#55544E">分割线 --line</span><span class="mono" style="color:#8A897F">#E5E4DF</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-size:12.5px;color:#55544E">控件描边 --line2</span><span class="mono" style="color:#8A897F">#D8D7D0</span></div>
+        </div>
+        <p style="font-size:11.5px;color:#8A897F;margin:14px 0 0;line-height:1.7">四级文字层级覆盖全部页面。<b style="color:#1A1A18">不为了高级感缩小字号</b> —— 摄影师要长时间盯屏。</p>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">色彩 · 状态<span class="tag">语义统一</span></div>
+      <div class="bd" style="gap:14px">
+        <div style="display:flex;align-items:center;gap:10px"><span class="badge badge-ok"><span class="d"></span>已选 / 已提交</span><span class="mono" style="color:#8A897F;margin-left:auto">#2F7D4F</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><span class="badge badge-warn"><span class="d"></span>选片中 / 即将到期</span><span class="mono" style="color:#8A897F;margin-left:auto">#9A6B00</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><span class="badge badge-info"><span class="d"></span>链接 / 可点击</span><span class="mono" style="color:#8A897F;margin-left:auto">#3A5FA8</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><span class="badge badge-err"><span class="d"></span>失败 / 错误</span><span class="mono" style="color:#8A897F;margin-left:auto">#B03A32</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><span class="badge badge-gray"><span class="d"></span>草稿 / 已归档</span><span class="mono" style="color:#8A897F;margin-left:auto">#8A897F</span></div>
+        <p style="font-size:11.5px;color:#8A897F;margin:0;line-height:1.7">全端同一语义同一颜色。绿色只在「完成」出现，橙色只在「进行中 / 到期」出现。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="state-grid">
+    <div class="state-card">
+      <div class="hd">字号阶梯</div>
+      <div class="bd" style="gap:12px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-size:24px;font-weight:600;width:96px;flex:0 0 96px">24 / 600</span><span style="font-size:12.5px;color:#8A897F">页面主标题 · 问候语</span></div>
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-size:19px;font-weight:600;width:96px;flex:0 0 96px">19 / 600</span><span style="font-size:12.5px;color:#8A897F">页面标题（项目 / 结果）</span></div>
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-size:16px;font-weight:600;width:96px;flex:0 0 96px">16 / 600</span><span style="font-size:12.5px;color:#8A897F">区块标题</span></div>
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-size:14.5px;font-weight:600;width:96px;flex:0 0 96px">14.5 / 600</span><span style="font-size:12.5px;color:#8A897F">卡片标题 · 项目名称</span></div>
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-size:13px;width:96px;flex:0 0 96px">13 / 400</span><span style="font-size:12.5px;color:#8A897F">正文 · 表格 · 按钮</span></div>
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-size:12px;color:#55544E;width:96px;flex:0 0 96px">12 / 400</span><span style="font-size:12.5px;color:#8A897F">辅助信息</span></div>
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-size:11.5px;color:#8A897F;width:96px;flex:0 0 96px">11.5 / 400</span><span style="font-size:12.5px;color:#8A897F">徽标 · 说明 · 时间戳</span></div>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">圆角 / 阴影 / 间距</div>
+      <div class="bd" style="gap:16px">
+        <div>
+          <div style="font-size:11.5px;color:#8A897F;margin-bottom:8px">圆角</div>
+          <div style="display:flex;gap:10px;align-items:flex-end">
+            <div style="text-align:center"><div style="width:52px;height:40px;background:#EFEEEA;border:1px solid #E5E4DF;border-radius:14px"></div><div class="mono" style="font-size:10.5px;color:#8A897F;margin-top:6px">14 卡片</div></div>
+            <div style="text-align:center"><div style="width:52px;height:40px;background:#EFEEEA;border:1px solid #E5E4DF;border-radius:8px"></div><div class="mono" style="font-size:10.5px;color:#8A897F;margin-top:6px">8 控件</div></div>
+            <div style="text-align:center"><div style="width:52px;height:40px;background:#EFEEEA;border:1px solid #E5E4DF;border-radius:999px"></div><div class="mono" style="font-size:10.5px;color:#8A897F;margin-top:6px">∞ 徽标</div></div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11.5px;color:#8A897F;margin-bottom:8px">阴影（仅三档，极轻）</div>
+          <div style="display:flex;gap:12px">
+            <div style="flex:1;height:44px;background:#fff;border-radius:8px;box-shadow:0 1px 2px rgba(24,23,20,.04)"></div>
+            <div style="flex:1;height:44px;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(24,23,20,.06)"></div>
+            <div style="flex:1;height:44px;background:#fff;border-radius:8px;box-shadow:0 6px 20px rgba(24,23,20,.10)"></div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11.5px;color:#8A897F;margin-bottom:8px">间距体系 4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48</div>
+          <div style="display:flex;align-items:flex-end;gap:4px">
+            <div style="width:4px;height:16px;background:#1C1C1A"></div>
+            <div style="width:8px;height:22px;background:#1C1C1A"></div>
+            <div style="width:12px;height:28px;background:#1C1C1A"></div>
+            <div style="width:16px;height:34px;background:#1C1C1A"></div>
+            <div style="width:20px;height:40px;background:#1C1C1A"></div>
+            <div style="width:24px;height:46px;background:#1C1C1A"></div>
+            <div style="width:32px;height:52px;background:#1C1C1A"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">按钮 / 控件 / 徽标</div>
+      <div class="bd" style="gap:14px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-pri">主按钮</button>
+          <button class="btn btn-sec">次按钮</button>
+          <button class="btn btn-ghost">文字按钮</button>
+          <button class="btn btn-danger">危险按钮</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <div class="field" style="width:180px"><span style="color:#8A897F;font-size:12.5px">搜索文件名</span></div>
+          <div class="select"><span>默认排序</span><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"/></svg></div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip on">全部</span><span class="chip">进行中</span><span class="chip">待处理</span></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span class="badge badge-ok"><span class="d"></span>已提交</span>
+          <span class="badge badge-warn"><span class="d"></span>选片中</span>
+          <span class="badge badge-gray"><span class="d"></span>草稿</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="bar"><i style="width:38%"></i></div>
+          <div class="bar"><i class="ok" style="width:100%"></i></div>
+          <div class="bar"><i class="warn" style="width:62%"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 2 · 登录页 ==================== -->
+<div class="ds-sec" id="s2">
+  <div class="ds-sec-head"><span class="idx">SECTION 2</span><h2>登录页</h2><p>微信扫码 · 极简 · 不做表单</p></div>
+  <p class="ds-note">
+    登录页在上方原型里：<button class="btn btn-sec btn-sm" onclick="showView('login')">在原型中打开登录页</button>
+    二维码为示意图形（真实环境由服务端生成，5 分钟有效）。登录成功直接进工作台。
+  </p>
+  <div class="state-grid">
+    <div class="state-card">
+      <div class="hd">默认状态</div>
+      <div class="bd" style="padding:0;min-height:0">
+        <div style="padding:32px 24px;text-align:center;background:#F5F5F3">
+          <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px">
+            <div class="side-mark"><i></i></div><div style="font-size:15px;font-weight:600">摄影选片</div>
+          </div>
+          <div class="qr-box" style="margin:0 auto">
+            <div class="qr-inner">
+              <div class="code"></div>
+              <div class="qr-corner a"></div><div class="qr-corner b"></div><div class="qr-corner c"></div>
+              <div class="qr-center"><i></i></div>
+            </div>
+          </div>
+          <div style="font-size:13px;color:#55544E;margin-top:20px">请用微信扫一扫</div>
+          <div style="font-size:11.5px;color:#8A897F;margin-top:6px">二维码 5 分钟内有效</div>
+        </div>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">二维码过期<span class="tag">原位置刷新</span></div>
+      <div class="bd" style="padding:0;min-height:0">
+        <div style="padding:32px 24px;text-align:center;background:#F5F5F3">
+          <div class="qr-box" style="margin:0 auto">
+            <div class="qr-inner">
+              <div class="code" style="opacity:.3"></div>
+              <div class="qr-corner a" style="opacity:.25"></div><div class="qr-corner b" style="opacity:.25"></div><div class="qr-corner c" style="opacity:.25"></div>
+              <div class="qr-expired">
+                <div style="font-size:13px;font-weight:600">二维码已过期</div>
+                <button class="btn btn-pri btn-sm">点击刷新</button>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:11.5px;color:#8A897F;margin-top:20px">过期后原位置刷新，不跳转页面</div>
+        </div>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">登录失效 / 权限失效<span class="tag">Error</span></div>
+      <div class="bd">
+        <div class="err-box">
+          <div class="ic">!</div>
+          <div class="t">登录状态已失效</div>
+          <div class="d">长时间未操作或已在其他设备退出，请重新扫码登录</div>
+          <button class="btn btn-pri btn-sm">重新扫码</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 3 · 工作台 ==================== -->
+<div class="ds-sec" id="s3">
+  <div class="ds-sec-head"><span class="idx">SECTION 3</span><h2>工作台</h2><p>登录后首页 · 回答「我现在有什么事要处理」· 不做 BI</p></div>
+  <p class="ds-note">
+    在上方原型中 <button class="btn btn-sec btn-sm" onclick="showView('dash')">打开工作台</button>
+    三个统计卡保持轻量：只有数字和一句提示。「最近动态」是摄影师真正需要的流水账；右侧「下一步建议」直接给可点击的下一动作，而不是堆图表。
+  </p>
+</div>
+
+<!-- ==================== SECTION 4 · 项目列表 ==================== -->
+<div class="ds-sec" id="s4">
+  <div class="ds-sec-head"><span class="idx">SECTION 4</span><h2>项目列表</h2><p>真实照片封面 · 状态 / 剩余天数 / 模特进度 / 进度条</p></div>
+  <p class="ds-note">
+    在上方原型中 <button class="btn btn-sec btn-sm" onclick="showView('projects')">打开项目列表</button>
+    项目封面<b>由该项目 3~5 张真实照片拼合</b>（禁止纯色矩形）；hover 轻微上浮 + 操作入口出现。
+    列数随宽度自适应：≥1760 五列 / ≥1560 四列 / ≥1300 三列 / &lt;1300 两列。到期前 7 天剩余天数转橙色。
+  </p>
+</div>
+
+<!-- ==================== SECTION 5 · 项目详情 ==================== -->
+<div class="ds-sec" id="s5">
+  <div class="ds-sec-head"><span class="idx">SECTION 5</span><h2>项目详情 / 照片墙</h2><p>★★★★★ 整个 Web 端最重要的页面 · 照片是绝对主角</p></div>
+  <p class="ds-note">
+    在上方原型中 <button class="btn btn-pri btn-sm" onclick="showView('detail')">打开项目详情</button>
+    ① 照片墙用 <b>Masonry 瀑布流</b>，按真实宽高比渲染，横竖混排不留白缝，列间距 6px；② 深色画布 #151513，照片是唯一视觉主体；
+    ③ hover 只显示文件名 + 选择状态，<b>不堆按钮</b>；④ 已选照片右上角绿色对勾 + 2px 内描边；⑤ 右侧信息栏可折叠，折叠后照片墙占满；
+    ⑥ 窄屏（&lt;1100px）信息栏自动收起、侧边栏收成图标栏。
+  </p>
+</div>
+
+<!-- ==================== SECTION 6 · 上传 ==================== -->
+<div class="ds-sec" id="s6">
+  <div class="ds-sec-head"><span class="idx">SECTION 6</span><h2>上传照片 · Drawer</h2><p>不离开照片墙 · 可最小化 · 传着还能继续看照片</p></div>
+  <p class="ds-note">
+    在上方原型中 <button class="btn btn-pri btn-sm" onclick="openDrawer()">打开上传抽屉</button>
+    <button class="btn btn-sec btn-sm" onclick="minDrawer()">看最小化状态</button>
+    抽屉 400px 从右侧滑出（窄屏 360 / 340px），背景压暗但照片墙仍在；点「—」最小化后底部出现进度条，摄影师可继续浏览照片墙 —— 这是网页端相对小程序的核心优势。
+  </p>
+</div>
+
+<!-- ==================== SECTION 7 · 大图 ==================== -->
+<div class="ds-sec" id="s7">
+  <div class="ds-sec-head"><span class="idx">SECTION 7</span><h2>大图预览 · Lightbox</h2><p>键盘 ← → / ESC / 滚轮缩放 / 按住拖动</p></div>
+  <p class="ds-note">
+    在上方原型中 <button class="btn btn-pri btn-sm" onclick="showView('detail');openLB(22)">打开大图预览</button>
+    打开后可用键盘左右切换、ESC 关闭，滚轮缩放（1x~4x），按住图片拖动。顶部常显文件名与序号，右下角显示选择状态 —— 不做成复杂修图软件。
+  </p>
+</div>
+
+<!-- ==================== SECTION 8 · 选片结果 ==================== -->
+<div class="ds-sec" id="s8">
+  <div class="ds-sec-head"><span class="idx">SECTION 8</span><h2>选片结果 · 文件名清单</h2><p>产品最终交付物 · 但不抢照片墙的视觉地位</p></div>
+  <p class="ds-note">
+    在上方原型中 <button class="btn btn-sec btn-sm" onclick="showView('result')">打开选片结果</button>
+    按模特筛选 chips + 文件名表格（等宽字体）+ 复制全部 / 导出 TXT。列表按<b>文件名升序</b>，与 Lightroom 排序一致。
+  </p>
+</div>
+
+<!-- ==================== SECTION 9 · 状态区 ==================== -->
+<div class="ds-sec" id="s9">
+  <div class="ds-sec-head"><span class="idx">SECTION 9</span><h2>空状态 / 加载 / 错误 / 交互状态</h2><p>每个状态都能恢复，不显示裸 Error</p></div>
+
+  <div class="sec-title"><h3>Empty State</h3></div>
+  <div class="state-grid" style="margin-bottom:32px">
+    <div class="state-card">
+      <div class="hd">项目为空</div>
+      <div class="bd">
+        <div class="empty"><div class="ic">▤</div><div class="t">还没有项目</div>
+          <div class="d">创建你的第一个选片项目，上传照片后即可邀请模特开始选片</div>
+          <button class="btn btn-pri">＋ 新建项目</button></div>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">照片为空（深色区）</div>
+      <div class="bd" style="background:#151513">
+        <div class="empty"><div class="ic" style="background:#262622;border-color:#32322D;color:#6B6960">▤</div>
+          <div class="t" style="color:#F2F1ED">还没有照片</div>
+          <div class="d" style="color:#8E8C84">上传 JPG 照片后即可邀请模特开始选片，RAW 文件会自动跳过</div>
+          <button class="btn btn-pri">↑ 上传照片</button></div>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">搜索无结果</div>
+      <div class="bd" style="background:#151513">
+        <div class="empty"><div class="ic" style="background:#262622;border-color:#32322D;color:#6B6960">⌕</div>
+          <div class="t" style="color:#F2F1ED">没有找到匹配的照片</div>
+          <div class="d" style="color:#8E8C84">没有文件名包含「DSC09999」的照片，换个关键词试试</div>
+          <button class="btn btn-sec">清除搜索</button></div>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">还没有模特选片</div>
+      <div class="bd">
+        <div class="empty"><div class="ic">☺</div><div class="t">还没有模特选择照片</div>
+          <div class="d">模特从你分享的邀请链接进入后，选片结果会实时显示在这里</div>
+          <button class="btn btn-sec">复制邀请链接</button></div>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">上传区空态</div>
+      <div class="bd">
+        <div class="empty"><div class="ic">↑</div><div class="t">把照片文件夹拖到这里</div>
+          <div class="d">支持 JPG，RAW 自动跳过 · 单个项目最多 999 张</div>
+          <button class="btn btn-sec btn-sm">选择文件夹</button></div>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">模特端 · 未收到邀请</div>
+      <div class="bd">
+        <div class="empty"><div class="ic">✉</div><div class="t">还没有拍摄项目</div>
+          <div class="d">摄影师发你邀请链接后，项目会自动出现在这里</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-title"><h3>Skeleton Loading</h3></div>
+  <div class="state-grid" style="margin-bottom:32px">
+    <div class="state-card">
+      <div class="hd">项目卡片骨架</div>
+      <div class="bd" style="padding:0;min-height:0">
+        <div class="sk" style="height:132px;border-radius:0"></div>
+        <div style="padding:16px">
+          <div class="sk sk-line" style="width:70%"></div>
+          <div class="sk sk-line" style="width:45%;height:10px"></div>
+          <div class="sk sk-line" style="width:100%;height:5px;margin-top:14px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">照片墙骨架（深色）</div>
+      <div class="bd" style="padding:0;min-height:0;background:#151513">
+        <div style="columns:3;column-gap:6px;padding:16px">
+          <div class="sk sk-dark" style="height:96px;margin-bottom:6px;border-radius:4px"></div>
+          <div class="sk sk-dark" style="height:140px;margin-bottom:6px;border-radius:4px"></div>
+          <div class="sk sk-dark" style="height:80px;margin-bottom:6px;border-radius:4px"></div>
+          <div class="sk sk-dark" style="height:120px;margin-bottom:6px;border-radius:4px"></div>
+          <div class="sk sk-dark" style="height:70px;margin-bottom:6px;border-radius:4px"></div>
+          <div class="sk sk-dark" style="height:110px;margin-bottom:6px;border-radius:4px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">右侧信息骨架</div>
+      <div class="bd" style="padding:16px">
+        <div class="sk sk-line" style="width:40%;height:10px"></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0">
+          <div class="sk" style="height:52px;border-radius:6px"></div>
+          <div class="sk" style="height:52px;border-radius:6px"></div>
+          <div class="sk" style="height:52px;border-radius:6px"></div>
+        </div>
+        <div class="sk sk-line" style="width:85%"></div>
+        <div class="sk sk-line" style="width:60%"></div>
+        <div class="sk sk-line" style="width:75%;margin-bottom:0"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-title"><h3>Error State</h3></div>
+  <div class="state-grid" style="margin-bottom:32px">
+    <div class="state-card">
+      <div class="hd">项目加载失败<span class="tag">可恢复</span></div>
+      <div class="bd">
+        <div class="err-box"><div class="ic">!</div><div class="t">项目列表加载失败</div>
+          <div class="d">网络连接不稳定，检查网络后重试</div><button class="btn btn-pri btn-sm">重试</button></div>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">照片加载失败（单张）</div>
+      <div class="bd" style="background:#151513">
+        <div class="sk sk-dark" style="height:130px;border-radius:4px;display:flex;align-items:center;justify-content:center">
+          <div style="text-align:center"><div style="font-size:12px;color:#8E8C84">照片加载失败</div>
+            <button class="btn btn-sec btn-sm" style="margin-top:10px">点击重试</button></div>
+        </div>
+        <p style="font-size:11.5px;color:#8E8C84;margin:12px 0 0;line-height:1.7">单张失败不影响其他照片，占位块保持原比例，避免瀑布流跳动。</p>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">上传失败（行内）</div>
+      <div class="bd" style="justify-content:flex-start;gap:12px">
+        <div class="err-inline"><span>3 张照片上传失败，已自动重试 3 次</span><button class="btn btn-sec btn-sm">全部重试</button></div>
+        <div class="up-item" style="background:#FAEBE9"><span class="fn">DSC02004.JPG</span><span class="st" style="color:#B03A32">× 失败</span><span class="retry">重试</span></div>
+        <p style="font-size:11.5px;color:#8A897F;margin:0;line-height:1.7">失败项保留在队列里，可单独重试，不影响其余照片继续上传。</p>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">网络异常</div>
+      <div class="bd">
+        <div class="err-box"><div class="ic">!</div><div class="t">网络连接已断开</div>
+          <div class="d">恢复网络后会自动重新连接，上传进度不会丢失</div><button class="btn btn-sec btn-sm">立即重连</button></div>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">登录失效</div>
+      <div class="bd">
+        <div class="err-box"><div class="ic">!</div><div class="t">登录状态已失效</div>
+          <div class="d">请重新扫码登录，当前未上传完成的照片会保留</div><button class="btn btn-pri btn-sm">重新扫码</button></div>
+      </div>
+    </div>
+    <div class="state-card">
+      <div class="hd">权限失效 / 无访问权</div>
+      <div class="bd">
+        <div class="err-box"><div class="ic">!</div><div class="t">项目不存在或无权访问</div>
+          <div class="d">该项目可能已被删除，或不属于当前账号</div><button class="btn btn-sec btn-sm">返回项目列表</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-title"><h3>交互状态矩阵</h3></div>
+  <div class="matrix">
+    <div class="mx">
+      <div class="lb2">1 · Default / Hover / Active</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-pri">主按钮</button><button class="btn btn-sec">次按钮</button></div>
+      <p>Hover 仅变深一档，无位移无发光；Active 用淡底 + 墨黑字 + 左侧 2.5px 指示条（侧边栏）</p>
+    </div>
+    <div class="mx">
+      <div class="lb2">2 · 卡片 Hover / 照片 Hover</div>
+      <div class="pcard" style="pointer-events:none">
+        <div class="pcover" style="height:70px">
+          <div class="grid3"><div class="col wide"><div class="ph k1"></div></div><div class="col"><div class="ph k2"></div><div class="ph k3"></div></div></div>
+          <div class="act"><span class="badge badge-gray">⋯</span></div><div class="cnt">48</div>
+        </div>
+      </div>
+      <p>卡片上浮 2px + 阴影加深；照片 hover 只出暗色遮罩 + 文件名，不出按钮</p>
+    </div>
+    <div class="mx">
+      <div class="lb2">3 · Selected 已选</div>
+      <div style="position:relative;width:120px">
+        <div class="ph k5" style="height:80px;border-radius:4px;outline:2px solid #4CAF7D;outline-offset:-2px"></div>
+        <span class="tick" style="position:absolute;right:6px;top:6px">✓</span>
+      </div>
+      <p>绿色对勾 + 2px 内描边，不遮挡照片本身</p>
+    </div>
+    <div class="mx">
+      <div class="lb2">4 · Uploading / Success / Failed</div>
+      <div style="display:flex;flex-direction:column;gap:4px;width:100%">
+        <div class="up-item"><span class="fn">DSC02001.JPG</span><span class="st" style="color:#2F7D4F">✓ 完成</span></div>
+        <div class="up-item"><span class="fn">DSC02003.JPG</span><span class="st" style="color:#9A6B00">↑ 上传中</span></div>
+        <div class="up-item"><span class="fn">DSC02004.JPG</span><span class="st" style="color:#B03A32">× 失败</span><span class="retry">重试</span></div>
+      </div>
+      <p>三态共用一个行样式，只换状态色与图标</p>
+    </div>
+    <div class="mx">
+      <div class="lb2">5 · Drawer Open / Minimized</div>
+      <div style="display:flex;flex-direction:column;gap:8px;width:100%">
+        <div style="height:26px;background:#1C1C1A;color:#F2F1ED;border-radius:6px;display:flex;align-items:center;padding:0 10px;font-size:11px">上传中 15 / 48</div>
+        <div class="bar"><i style="width:31%"></i></div>
+      </div>
+      <p>最小化后摄影师仍可浏览照片墙，进度不中断</p>
+    </div>
+    <div class="mx">
+      <div class="lb2">6 · Sidebar / 信息栏折叠</div>
+      <div style="display:flex;gap:6px">
+        <div style="width:26px;height:52px;background:#EFEEEA;border-radius:6px;border-left:2.5px solid #1C1C1A"></div>
+        <div style="flex:1;height:52px;background:#EFEEEA;border-radius:6px"></div>
+      </div>
+      <p>窄屏 &lt;1100px 侧边栏收为图标栏、信息栏自动隐藏</p>
+    </div>
+    <div class="mx">
+      <div class="lb2">7 · Loading（骨架）</div>
+      <div style="width:100%"><div class="sk sk-line" style="width:80%"></div><div class="sk sk-line" style="width:55%;margin-bottom:0"></div></div>
+      <p>轻微 shimmer，1.4s，不做复杂动画</p>
+    </div>
+    <div class="mx">
+      <div class="lb2">8 · Empty / Error</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span class="badge badge-gray"><span class="d"></span>空状态带动作按钮</span>
+        <span class="badge badge-err"><span class="d"></span>错误带重试</span>
+      </div>
+      <p>每个空态给下一步动作，每个错误给恢复入口</p>
+    </div>
+  </div>
+</div>
+
+<p style="text-align:center;color:#8A897F;font-size:12px;margin:40px 0 0;line-height:1.8">
+  摄影线上选片平台 · Web 摄影师控制台 UI 2.0 · 设计稿仅用于视觉评审与编码参考<br>
+  业务逻辑保持不变：项目 → 照片墙 → 模特选片 → 文件名清单 → Lightroom
+</p>
+</div>
+
+<script>
+/* ============================================================
+   交互脚本（原生 JS，仅服务设计稿演示）
+   ============================================================ */
+var app = document.getElementById('app');
+var stage = document.getElementById('stage');
+var wall = document.getElementById('wall');
+
+/* ---------- 照片数据（48 张，横竖混排，18 张被选） ---------- */
+var RATIOS = [[3,2],[2,3],[3,2],[4,5],[16,9],[1,1],[2,3],[3,2],[4,3],[2,3],[3,2],[1,1]];
+var ZHOU = [2,5,7,11,13,17,19,23,29,31];
+var WANG = [4,8,12,16,20,27,35,38];
+var PHOTOS = [];
+for (var i = 0; i < 48; i++) {
+  var r = RATIOS[i % 12];
+  var by = [];
+  if (ZHOU.indexOf(i) >= 0) by.push('小周');
+  if (WANG.indexOf(i) >= 0) by.push('小王');
+  PHOTOS.push({ fn: 'DSC0' + (1001 + i) + '.JPG', w: r[0], h: r[1], k: (i % 12) + 1, by: by });
+}
+
+/* ---------- 项目数据 ---------- */
+var PROJECTS = [
+  { name: '小王 · 3月外景写真', count: 48, selected: 18, models: 2, status: '选片中', statusCls: 'badge-warn',
+    remain: 8, remainCls: '', meta: '更新于 10-05 · 存续至 10-21', ks: [1,5,3],
+    lines: [['小周','已提交','st-ok'],['小王','选片中','st-ing']], prog: 38 },
+  { name: '小周 · 城市夜景胶片', count: 62, selected: 24, models: 1, status: '已提交', statusCls: 'badge-ok',
+    remain: 21, remainCls: '', meta: '更新于 10-04 · 存续至 11-04', ks: [4,6,12],
+    lines: [['小周','已提交','st-ok']], prog: 39 },
+  { name: '春日和服 · 京都旅拍', count: 120, selected: 0, models: 0, status: '上传中', statusCls: 'badge-info',
+    remain: 29, remainCls: '', meta: '更新于 10-05 · 存续至 11-03', ks: [7,9,11],
+    lines: [['—','尚未邀请模特','st-wait']], prog: 0 },
+  { name: '城市扫街 · 2026 春', count: 36, selected: 0, models: 0, status: '草稿', statusCls: 'badge-gray',
+    remain: 30, remainCls: '', meta: '创建于 10-02 · 尚未上传', ks: [10,12,8],
+    lines: [['—','尚未上传照片','st-wait']], prog: 0 },
+  { name: '2025 秋日银杏 · 已归档', count: 86, selected: 30, models: 2, status: '已归档', statusCls: 'badge-gray',
+    remain: 0, remainCls: '', meta: '归档于 09-08 · 大图已清理', ks: [9,1,5],
+    lines: [['小李','已归档','st-wait']], prog: 35 }
+];
+
+function coverHtml(ks, count) {
+  return '<div class="pcover">' +
+    '<div class="grid3">' +
+      '<div class="col wide"><div class="ph k' + ks[0] + '"></div></div>' +
+      '<div class="col"><div class="ph k' + ks[1] + '"></div><div class="ph k' + ks[2] + '"></div></div>' +
+    '</div>' +
+    '<div class="act"><span class="badge badge-gray">⋯</span></div>' +
+    '<div class="cnt">' + count + '</div>' +
+  '</div>';
+}
+function cardHtml(p) {
+  var remainTxt = p.remain > 0 ? '剩余 ' + p.remain + ' 天' : '已归档';
+  var remainStyle = (p.remain > 0 && p.remain <= 7) ? 'color:#9A6B00;font-weight:600' : '';
+  var lines = '';
+  for (var i = 0; i < p.lines.length; i++) {
+    lines += '<div class="pmline"><span class="nm">' + p.lines[i][0] + '</span>' +
+      '<span class="st ' + p.lines[i][2] + '"><i></i>' + p.lines[i][1] + '</span></div>';
+  }
+  return '<button class="pcard" data-go="detail">' + coverHtml(p.ks, p.count) +
+    '<div class="pbody">' +
+      '<div class="pname">' + p.name + '</div>' +
+      '<div class="pmeta">' + p.meta + '</div>' +
+      '<div class="prow"><span class="badge ' + p.statusCls + '"><span class="d"></span>' + p.status + '</span>' +
+        '<span style="margin-left:auto;font-size:12px;color:#55544E" ' + remainStyle + '>' + remainTxt + '</span></div>' +
+      '<div class="pmodels">' + lines + '</div>' +
+      '<div class="pprog"><div class="lbl"><span>已选 ' + p.selected + ' / ' + p.count + '</span><b>' + p.prog + '%</b></div>' +
+        '<div class="bar"><i class="' + (p.statusCls === 'badge-ok' ? 'ok' : (p.statusCls === 'badge-warn' ? 'warn' : '')) + '" style="width:' + p.prog + '%"></i></div></div>' +
+    '</div></button>';
+}
+function renderProjects() {
+  var grid = document.getElementById('projGrid');
+  var dash = document.getElementById('dashProjects');
+  var h = '';
+  for (var i = 0; i < PROJECTS.length; i++) h += cardHtml(PROJECTS[i]);
+  grid.innerHTML = h;
+  var h2 = '';
+  for (var j = 0; j < 4; j++) h2 += cardHtml(PROJECTS[j]);
+  dash.innerHTML = h2;
+}
+
+/* ---------- 照片墙 ---------- */
+function renderWall() {
+  var h = '';
+  for (var i = 0; i < PHOTOS.length; i++) {
+    var p = PHOTOS[i];
+    var sel = p.by.length > 0;
+    var who = sel ? '✓ ' + p.by.join('、') + ' 已选' : '未选';
+    h += '<button class="shot' + (sel ? ' sel' : '') + '" data-i="' + i + '" data-sel="' + (sel ? 1 : 0) + '">' +
+      '<span class="ph k' + p.k + '" style="aspect-ratio:' + p.w + '/' + p.h + '"></span>' +
+      '<span class="mask"><span class="fn">' + p.fn + '</span><span class="who' + (sel ? '' : ' no') + '">' + who + '</span></span>' +
+      (sel ? '<span class="tick">✓</span>' : '') +
+    '</button>';
+  }
+  wall.innerHTML = h;
+}
+function applyFilter() {
+  var f = wall.getAttribute('data-f') || 'all';
+  var q = (document.getElementById('wallSearch').value || '').trim().toUpperCase();
+  var nodes = wall.querySelectorAll('.shot');
+  var shown = 0;
+  for (var i = 0; i < nodes.length; i++) {
+    var n = nodes[i];
+    var p = PHOTOS[+n.getAttribute('data-i')];
+    var okF = (f === 'all') || (f === 'sel' && p.by.length > 0) || (f === 'un' && p.by.length === 0);
+    var okQ = !q || p.fn.indexOf(q) >= 0;
+    var vis = okF && okQ;
+    n.classList.toggle('hide', !vis);
+    if (vis) shown++;
+  }
+  document.getElementById('wallCount').textContent = shown + ' 张 · 已选 18';
+}
+
+/* ---------- 结果表 ---------- */
+function renderResult() {
+  var rows = '';
+  var n = 0;
+  for (var i = 0; i < PHOTOS.length; i++) {
+    var p = PHOTOS[i];
+    if (!p.by.length) continue;
+    n++;
+    var tm = (p.by.indexOf('小周') >= 0) ? '10-05 14:06' : '10-05 11:32';
+    rows += '<tr><td class="idx">' + n + '</td><td class="fn">' + p.fn + '</td>' +
+      '<td class="who">' + p.by.join('、') + '</td><td class="tm">' + tm + '</td>' +
+      '<td class="op"><span style="color:#8A897F;font-size:12px">查看</span></td></tr>';
+  }
+  document.getElementById('resultBody').innerHTML = rows;
+}
+
+/* ---------- 视图切换 ---------- */
+var VIEWS = { login: 'v-login', dash: 'v-dash', projects: 'v-projects', detail: 'v-detail', result: 'v-result' };
+function showView(v) {
+  for (var k in VIEWS) {
+    var el = document.getElementById(VIEWS[k]);
+    el.hidden = true;
+    el.style.display = 'none';
+  }
+  var t = document.getElementById(VIEWS[v]);
+  t.hidden = false;
+  t.style.display = (v === 'detail') ? 'flex' : 'block';
+  app.setAttribute('data-view', v);
+  var navs = document.querySelectorAll('.nav-item[data-go]');
+  for (var i = 0; i < navs.length; i++) {
+    var g = navs[i].getAttribute('data-go');
+    navs[i].classList.toggle('on', (g === v));
+  }
+  if (v !== 'detail') { app.setAttribute('data-drawer', 'closed'); app.setAttribute('data-lb', 'off'); }
+}
+document.addEventListener('click', function (e) {
+  var el = e.target.closest ? e.target.closest('[data-go]') : null;
+  if (el) showView(el.getAttribute('data-go'));
+});
+
+/* ---------- Viewport 切换 ---------- */
+var vpBtns = document.querySelectorAll('.ds-vp button');
+for (var b = 0; b < vpBtns.length; b++) {
+  vpBtns[b].addEventListener('click', function () {
+    for (var i = 0; i < vpBtns.length; i++) vpBtns[i].classList.remove('on');
+    this.classList.add('on');
+    var w = this.getAttribute('data-vp');
+    stage.style.width = w + 'px';
+    document.getElementById('stageTag').textContent = w + ' px';
+  });
+}
+
+/* ---------- 上传抽屉 ---------- */
+function openDrawer() { showView('detail'); app.setAttribute('data-drawer', 'open'); }
+function minDrawer() { app.setAttribute('data-drawer', 'min'); }
+function closeDrawer() { app.setAttribute('data-drawer', 'closed'); }
+document.getElementById('btnUpload').addEventListener('click', openDrawer);
+document.getElementById('btnMin').addEventListener('click', minDrawer);
+document.getElementById('btnRestore').addEventListener('click', function () { app.setAttribute('data-drawer', 'open'); });
+document.getElementById('btnCloseDrawer').addEventListener('click', closeDrawer);
+document.getElementById('scrim').addEventListener('click', closeDrawer);
+var specs = document.querySelectorAll('#specGrid .spec');
+for (var s = 0; s < specs.length; s++) {
+  specs[s].addEventListener('click', function () {
+    for (var i = 0; i < specs.length; i++) specs[i].classList.remove('on');
+    this.classList.add('on');
+  });
+}
+
+/* ---------- 右侧信息栏 ---------- */
+function togglePanel() {
+  var off = app.getAttribute('data-panel') === 'off';
+  app.setAttribute('data-panel', off ? 'on' : 'off');
+  document.getElementById('panelLabel').textContent = off ? '收起信息栏' : '展开信息栏';
+}
+document.getElementById('btnPanel').addEventListener('click', togglePanel);
+document.getElementById('btnPanel2').addEventListener('click', togglePanel);
+document.getElementById('btnPanelCollapse').addEventListener('click', togglePanel);
+
+/* ---------- 照片墙 Tab / 密度 / 搜索 ---------- */
+var tabs = document.querySelectorAll('#wallTabs button');
+for (var t = 0; t < tabs.length; t++) {
+  tabs[t].addEventListener('click', function () {
+    for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('on');
+    this.classList.add('on');
+    wall.setAttribute('data-f', this.getAttribute('data-f'));
+    applyFilter();
+  });
+}
+var densBtns = document.querySelectorAll('#dens button');
+for (var d = 0; d < densBtns.length; d++) {
+  densBtns[d].addEventListener('click', function () {
+    for (var i = 0; i < densBtns.length; i++) densBtns[i].classList.remove('on');
+    this.classList.add('on');
+    wall.setAttribute('data-d', this.getAttribute('data-d'));
+  });
+}
+document.getElementById('wallSearch').addEventListener('input', applyFilter);
+wall.addEventListener('click', function (e) {
+  var el = e.target.closest ? e.target.closest('.shot') : null;
+  if (el) openLB(+el.getAttribute('data-i'));
+});
+
+/* ---------- 大图 Lightbox ---------- */
+var lbIndex = 0, scale = 1, tx = 0, ty = 0;
+function openLB(i) {
+  lbIndex = i; scale = 1; tx = 0; ty = 0;
+  showView('detail');
+  app.setAttribute('data-lb', 'on');
+  paintLB();
+}
+function paintLB() {
+  var p = PHOTOS[lbIndex];
+  var img = document.getElementById('lbImg');
+  img.className = 'ph k' + p.k;
+  var W, H;
+  if (p.w / p.h >= 1) { W = 560; H = Math.round(560 * p.h / p.w); }
+  else { H = 470; W = Math.round(470 * p.w / p.h); }
+  img.style.width = W + 'px';
+  img.style.height = H + 'px';
+  document.getElementById('lbFn').textContent = p.fn;
+  document.getElementById('lbIdx').textContent = (lbIndex + 1) + ' / 48';
+  var sel = p.by.length > 0;
+  var badge = document.getElementById('lbSel');
+  badge.style.display = sel ? '' : 'none';
+  badge.className = 'badge ' + (sel ? 'badge-ok' : 'badge-gray');
+  badge.innerHTML = '<span class="d"></span>' + (sel ? '已选 · ' + p.by.join('、') : '未选');
+  var mark = document.getElementById('lbMark');
+  mark.classList.toggle('on', sel);
+  mark.textContent = sel ? '✓ 已选' : '标记为已选';
+  applyTransform();
+}
+function applyTransform() {
+  document.getElementById('lbHolder').style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
+  document.getElementById('zoomV').textContent = Math.round(scale * 100) + '%';
+}
+function navLB(dir) {
+  lbIndex = (lbIndex + dir + 48) % 48;
+  scale = 1; tx = 0; ty = 0;
+  paintLB();
+}
+function closeLB() { app.setAttribute('data-lb', 'off'); }
+document.getElementById('lbPrev').addEventListener('click', function () { navLB(-1); });
+document.getElementById('lbNext').addEventListener('click', function () { navLB(1); });
+document.getElementById('lbClose').addEventListener('click', closeLB);
+document.getElementById('lbMark').addEventListener('click', function () { this.classList.toggle('on'); });
+document.getElementById('zoomIn').addEventListener('click', function () { scale = Math.min(4, scale + 0.25); applyTransform(); });
+document.getElementById('zoomOut').addEventListener('click', function () { scale = Math.max(1, scale - 0.25); applyTransform(); });
+document.getElementById('zoomReset').addEventListener('click', function () { scale = 1; tx = 0; ty = 0; applyTransform(); });
+document.getElementById('lbStage').addEventListener('wheel', function (e) {
+  e.preventDefault();
+  scale = Math.min(4, Math.max(1, scale + (e.deltaY < 0 ? 0.18 : -0.18)));
+  if (scale === 1) { tx = 0; ty = 0; }
+  applyTransform();
+}, { passive: false });
+var dragging = false, sx = 0, sy = 0;
+document.getElementById('lbStage').addEventListener('mousedown', function (e) {
+  if (scale <= 1) return;
+  dragging = true; sx = e.clientX - tx; sy = e.clientY - ty;
+});
+document.addEventListener('mousemove', function (e) {
+  if (!dragging) return;
+  tx = e.clientX - sx; ty = e.clientY - sy;
+  applyTransform();
+});
+document.addEventListener('mouseup', function () { dragging = false; });
+document.addEventListener('keydown', function (e) {
+  if (app.getAttribute('data-lb') !== 'on') return;
+  if (e.key === 'ArrowLeft') navLB(-1);
+  else if (e.key === 'ArrowRight') navLB(1);
+  else if (e.key === 'Escape') closeLB();
+});
+
+/* ---------- 项目列表：搜索 / 状态 / 空状态 ---------- */
+var statusChips = document.querySelectorAll('#statusChips .chip');
+for (var c = 0; c < statusChips.length; c++) {
+  statusChips[c].addEventListener('click', function () {
+    for (var i = 0; i < statusChips.length; i++) statusChips[i].classList.remove('on');
+    this.classList.add('on');
+  });
+}
+var resultChips = document.querySelectorAll('#resultChips .chip');
+for (var c2 = 0; c2 < resultChips.length; c2++) {
+  resultChips[c2].addEventListener('click', function () {
+    for (var i = 0; i < resultChips.length; i++) resultChips[i].classList.remove('on');
+    this.classList.add('on');
+  });
+}
+document.getElementById('projSearch').addEventListener('input', function () {
+  var q = this.value.trim();
+  var cards = document.getElementById('projGrid').querySelectorAll('.pcard');
+  for (var i = 0; i < cards.length; i++) {
+    var name = cards[i].querySelector('.pname').textContent;
+    cards[i].style.display = (!q || name.indexOf(q) >= 0) ? '' : 'none';
+  }
+});
+var emptyOn = false;
+document.getElementById('btnToggleEmpty').addEventListener('click', function () {
+  emptyOn = !emptyOn;
+  var grid = document.getElementById('projGrid');
+  if (emptyOn) {
+    grid.innerHTML = '<div class="card" style="grid-column:1/-1"><div class="empty">' +
+      '<div class="ic">▤</div><div class="t">还没有项目</div>' +
+      '<div class="d">创建你的第一个选片项目，上传照片后即可邀请模特开始选片</div>' +
+      '<button class="btn btn-pri">＋ 新建项目</button></div></div>';
+    this.textContent = '恢复列表';
+  } else {
+    renderProjects();
+    this.textContent = '演示空状态';
+  }
+});
+
+/* ---------- 复制提示 ---------- */
+document.getElementById('btnCopy').addEventListener('click', function () {
+  var t = document.getElementById('toast');
+  t.textContent = '已复制 18 个文件名，可直接粘进 Lightroom';
+  t.classList.add('on');
+  setTimeout(function () { t.classList.remove('on'); }, 2200);
+});
+document.getElementById('btnInvite').addEventListener('click', function () {
+  var t = document.getElementById('toast');
+  t.textContent = '邀请链接已复制，发给模特即可开始选片';
+  t.classList.add('on');
+  setTimeout(function () { t.classList.remove('on'); }, 2200);
+});
+
+/* ---------- 初始化 ---------- */
+renderProjects();
+renderWall();
+renderResult();
+showView('detail');
+</script>
+</body>
+</html>

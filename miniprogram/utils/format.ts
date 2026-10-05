@@ -4,8 +4,7 @@ export const STATUS_TEXT: Record<string, string> = {
   UPLOADING: '照片上传中',
   SELECTING: '等待模特选片',
   SELECTION_SUBMITTED: '已提交选片',
-  COMPLETED: '已完成',
-  EXPIRED: '已过期',
+  ARCHIVED: '已归档',
 }
 
 export function statusText(status: string): string {

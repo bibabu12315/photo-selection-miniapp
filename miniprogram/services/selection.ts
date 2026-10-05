@@ -90,6 +90,23 @@ export async function getPhotos(
 }
 
 /**
+ * 重取缩略图临时链接（模特端瀑布流图片加载失败时自愈）
+ * 与摄影师端的 photo.thumbUrls 同用途，这里走 selection（模特身份校验）
+ */
+export async function refreshThumbUrls(
+  projectId: string,
+  modelId: string,
+  photoIds: string[]
+) {
+  return callSafe<{ list: { photoId: string; thumbUrl: string }[] }>('selection', {
+    action: 'thumbUrls',
+    projectId,
+    modelId,
+    photoIds,
+  })
+}
+
+/**
  * 大图临时链接
  * range = 2 时一次返回当前张 + 前后各 2 张，滑动连看不再每张一次调用
  */

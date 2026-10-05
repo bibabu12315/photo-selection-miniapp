@@ -4,6 +4,45 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+/** 网页会话的有效状态：登出后置 REVOKED，这里只认 ACTIVE */
+const SESSION_ACTIVE = 'ACTIVE'
+
+/* ---------- 身份解析 ---------- */
+
+/**
+ * 解析调用者 openid。
+ * 小程序路径优先于网页路径（BR-105）：即便网页的 event 里混入 sessionToken，
+ * 只要请求真的来自小程序就以微信签发的 OPENID 为准，防止网页伪造提权。
+ * 返回 '' 表示无法识别身份，调用方必须拒绝。
+ */
+async function resolveCaller(event) {
+  const { OPENID } = cloud.getWXContext()
+  if (OPENID) return OPENID
+
+  const token = String((event && event.sessionToken) || '').trim()
+  if (!token) return ''
+  return await openidBySessionToken(token)
+}
+
+/** 网页会话换 openid：token 不存在 / 已登出 / 已过期，一律视为无身份 */
+async function openidBySessionToken(token) {
+  try {
+    const res = await db
+      .collection('session')
+      .where({ token, status: SESSION_ACTIVE })
+      .limit(1)
+      .get()
+    const s = res.data && res.data[0]
+    if (!s || !s.openid) return ''
+    if (!s.tokenExpireAt || s.tokenExpireAt < Date.now()) return ''
+    return s.openid
+  } catch (e) {
+    // session 集合尚未建立（T-P0-2 之前）时，小程序路径必须照常可用
+    console.warn('[selection] 会话校验失败', e && e.message)
+    return ''
+  }
+}
+
 /**
  * 选片云函数（V2.0 双端版）
  *
@@ -28,31 +67,36 @@ const _ = db.command
  *   selection { projectId, modelId, photoIds[], locked }  双人键，一项目×一模特一份
  */
 exports.main = async (event = {}) => {
-  const { OPENID } = cloud.getWXContext()
-  if (!OPENID) {
-    return { ok: false, error: '取不到 OPENID，请通过小程序端调用' }
+  // 同一套 action 同时服务两端：模特走小程序 OPENID，摄影师网页走 sessionToken
+  const openid = await resolveCaller(event)
+  if (!openid) {
+    return { ok: false, error: '登录已过期，请重新扫码登录', code: 'ERR_NO_AUTH' }
   }
 
   try {
     switch (event.action) {
       case 'whoami':
-        return await whoami(OPENID)
+        return await whoami(openid)
       case 'entry':
-        return await entry(event, OPENID)
+        return await entry(event, openid)
       case 'myList':
-        return await myList(OPENID)
+        return await myList(openid)
       case 'getPhotos':
-        return await getPhotos(event, OPENID)
+        return await getPhotos(event, openid)
       case 'getPreview':
-        return await getPreview(event, OPENID)
+        return await getPreview(event, openid)
+      case 'thumbUrls':
+        return await thumbUrls(event, openid)
       case 'saveSelection':
-        return await saveSelection(event, OPENID, false)
+        return await saveSelection(event, openid, false)
       case 'submitSelection':
-        return await saveSelection(event, OPENID, true)
+        return await saveSelection(event, openid, true)
       case 'getResult':
-        return await getResult(event, OPENID)
+        return await getResult(event, openid)
+      case 'getProjectResults':
+        return await getProjectResults(event, openid)
       case 'resetLock':
-        return await resetLock(event, OPENID)
+        return await resetLock(event, openid)
       default:
         return { ok: false, error: '未知 action: ' + (event.action || '') }
     }
@@ -249,6 +293,40 @@ async function getPhotos({ projectId, modelId, skip = 0, limit = 18, have }, ope
 }
 
 /**
+ * 批量重取缩略图临时链接（模特端瀑布流图片加载失败时自愈用）。
+ *
+ * 云端私有读的临时链接实际只有约 10 分钟有效期，模特慢慢往下滚时后面的链接
+ * 已经过期。加载失败就丢缓存、用这里换一条新链接，不必整页重拉。
+ * 鉴权复用 guardModel（模特本人 + 项目未过期），不额外引入新规则。
+ */
+async function thumbUrls({ projectId, modelId, photoIds }, openid) {
+  const { project } = await guardModel(projectId, modelId, openid)
+
+  const ids = (Array.isArray(photoIds) ? photoIds : [])
+    .filter((x) => typeof x === 'string' && x)
+    .slice(0, 50)
+  if (!ids.length) return { ok: false, error: '缺少参数', code: 'ERR_PARAM' }
+
+  const res = await db
+    .collection('photo')
+    .where({ projectId: project._id, _id: _.in(ids) })
+    .field({ thumbFileID: 1, projectId: 1 })
+    .limit(50)
+    .get()
+    .catch(() => null)
+  const rows = (res && res.data) || []
+  if (!rows.length) return { ok: false, error: '照片不存在', code: 'ERR_NOT_FOUND' }
+
+  const urlMap = await tempUrls(rows.map((x) => x.thumbFileID))
+  return {
+    ok: true,
+    data: {
+      list: rows.map((x) => ({ photoId: x._id, thumbUrl: urlMap[x.thumbFileID] || '' })),
+    },
+  }
+}
+
+/**
  * 大图临时链接
  * range > 0 时一次返回当前张 + 前后各 range 张（默认 0，模特端传 2）
  * 一次调用顶 5 次：连续滑 20 张只产生约 4~5 次调用，而不是 20 次
@@ -256,7 +334,11 @@ async function getPhotos({ projectId, modelId, skip = 0, limit = 18, have }, ope
 async function getPreview({ projectId, modelId, photoId, range }, openid) {
   const { project } = await guardModel(projectId, modelId, openid)
   if (project.status === 'ARCHIVED') {
-    return { ok: false, error: '项目已归档，大图已清理；如需重新选片请联系摄影师续期' }
+    return {
+      ok: false,
+      error: '项目已归档，大图已清理；如需查看大图请联系摄影师续期',
+      code: 'ERR_ARCHIVED',
+    }
   }
 
   const res = await db.collection('photo').doc(String(photoId || '')).get()
@@ -306,9 +388,21 @@ async function getPreview({ projectId, modelId, photoId, range }, openid) {
   }
 }
 
-/** 保存 / 提交选片（提交后仍可回来调整，重新提交覆盖上一版） */
+/** 自动保存 / 提交选片（提交后锁定，改选择必须由摄影师解锁） */
 async function saveSelection({ projectId, modelId, photoIds }, openid, submit) {
-  const { project } = await guardModel(projectId, modelId, openid)
+  const { project, selection } = await guardModel(projectId, modelId, openid)
+
+  // 重复提交幂等：已锁定时直接返回成功，不改数据、不重复推送（31_STATE_MACHINE 八 C-3）
+  if (submit && selection && selection.locked) {
+    return {
+      ok: true,
+      data: { saved: true, locked: true, selectedCount: (selection.photoIds || []).length },
+    }
+  }
+  // 已提交后禁止模特自行改动（R-1）；摄影师 resetLock 后 locked 为 false，这里自然放行
+  if (selection && selection.locked) {
+    return { ok: false, error: '已提交，如需修改请联系摄影师', code: 'ERR_LOCKED' }
+  }
 
   const ids = Array.isArray(photoIds)
     ? Array.from(
@@ -345,10 +439,85 @@ async function saveSelection({ projectId, modelId, photoIds }, openid, submit) {
     submittedAt: submit ? now : 0,
   })
 
+  // 订阅通知（T-P2-3）：只在「首次提交」走到这里（重复提交在上面幂等分支已返回）。
+  // 推送失败只记日志，不影响提交结果（42 文档 T-P2-3 完成标准）
+  if (submit) {
+    await notifyOwnerSubmit(project, modelId, now)
+  }
+
   return {
     ok: true,
     data: { saved: true, locked: !!submit, selectedCount: ids.length },
   }
+}
+
+/* ---------- 订阅消息（T-P2-3） ---------- */
+
+/** 模板 ID 走环境变量（云开发控制台 → 云函数 selection → 配置 → 环境变量），不硬编码 */
+const SUBSCRIBE_TPL_ID = process.env.SUBSCRIBE_TPL_ID || ''
+/** 开发期用体验版，正式发布前在环境变量里改成 formal（与 B-3 同批） */
+const SUBSCRIBE_MSG_STATE = process.env.SUBSCRIBE_MSG_STATE || 'trial'
+
+/**
+ * 模特提交时给项目主人推一条「选片完成通知」
+ * 授权模型：一次 notifyAuth 推一次，推完即消耗（置 false）。
+ * 模板「用户加入任务提醒」：thing1=用户（模特名） thing2=任务名称（项目名） time3=时间
+ */
+async function notifyOwnerSubmit(project, modelId, now) {
+  try {
+    if (!project.ownerOpenid) return
+    if (!SUBSCRIBE_TPL_ID) {
+      console.log('[notify] 跳过：未配置环境变量 SUBSCRIBE_TPL_ID')
+      return
+    }
+
+    const invRes = await db
+      .collection('invite')
+      .where({ projectId: project._id, modelId: modelId })
+      .limit(1)
+      .get()
+    const inv = invRes.data && invRes.data[0]
+    if (!inv || !inv.notifyAuth) return // 未授权：静默不推（03_USER_FLOW 通知流程）
+
+    const name = modelDisplayName(project, modelId)
+    // thing 类型限 20 字符
+    const res = await cloud.openapi.subscribeMessage.send({
+      touser: project.ownerOpenid,
+      templateId: SUBSCRIBE_TPL_ID,
+      page: 'pages/project-detail/index?id=' + project._id,
+      miniprogramState: SUBSCRIBE_MSG_STATE,
+      data: {
+        thing1: { value: String(name).slice(0, 20) },
+        thing2: { value: String(project.name || '').slice(0, 20) },
+        time3: { value: fmtCnTime(now) },
+      },
+    })
+    console.log('[notify] 已推送', JSON.stringify(res))
+
+    // 消耗这次授权
+    await db.collection('invite').doc(inv._id).update({
+      data: { notifyAuth: false, notifyUsedAt: now },
+    })
+  } catch (e) {
+    // 43101 = 用户未订阅/已拒收；其余错误同样只记日志，不回滚提交
+    console.log('[notify] 推送失败（不影响提交）', e.errCode || '', e.errMsg || e.message)
+  }
+}
+
+/** 从 project.models 里取模特备注名；找不到就用「模特」兜底 */
+function modelDisplayName(project, modelId) {
+  const hit = (project.models || []).find((m) => m.modelId === modelId)
+  return (hit && hit.name) || '模特'
+}
+
+/** 订阅消息 time 类型要求的格式：2026年10月5日 14:56 */
+function fmtCnTime(ts) {
+  const d = new Date(ts)
+  const pad = (n) => (n < 10 ? '0' + n : '' + n)
+  return (
+    d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' +
+    pad(d.getHours()) + ':' + pad(d.getMinutes())
+  )
 }
 
 /* ---------- 摄影师端 ---------- */
@@ -390,6 +559,75 @@ async function getResult({ projectId, modelId }, openid) {
         filename: p.filename,
         thumbUrl: urlMap[p.thumbFileID] || '',
       })),
+    },
+  }
+}
+
+/**
+ * 一次取回项目下全部模特的已选文件名（网页导出用，22_API 5.10）
+ * 只返回文件名，**不生成任何临时链接**（BR-805：导出不需要图，零额外云调用）
+ */
+async function getProjectResults({ projectId }, openid) {
+  if (!(await isAdmin(openid))) {
+    return { ok: false, error: '无权限：仅摄影师可查看选片结果' }
+  }
+  if (!projectId) return { ok: false, error: '缺少参数' }
+
+  const p = await projectById(projectId)
+  // 非本人项目与「不存在」返回同一句，避免用报错差异探测别人的项目 ID
+  if (!p || p.ownerOpenid !== openid) {
+    return { ok: false, error: '项目不存在或无权访问' }
+  }
+
+  // 一次查 photo 建 _id → filename 映射
+  const photoRes = await db
+    .collection('photo')
+    .where({ projectId })
+    .limit(1000)
+    .get()
+  const nameOf = {}
+  ;(photoRes.data || []).forEach((ph) => {
+    nameOf[ph._id] = ph.filename
+  })
+
+  // 一次查全体模特的选片记录
+  const selRes = await db
+    .collection('selection')
+    .where({ projectId })
+    .limit(100)
+    .get()
+  const selMap = {}
+  ;(selRes.data || []).forEach((s) => {
+    selMap[s.modelId] = s
+  })
+
+  const models = (p.models || []).map((m) => {
+    const s = selMap[m.modelId] || null
+    const ids = (s && s.photoIds) || []
+    const filenames = ids
+      .map((id) => nameOf[id])
+      .filter((n) => !!n)
+      .sort() // 服务端按文件名升序排好，前端不再排
+    return {
+      modelId: m.modelId,
+      displayName: m.name || '',
+      locked: !!(s && s.locked),
+      submittedAt: (s && s.submittedAt) || 0,
+      selectedCount: filenames.length,
+      filenames,
+    }
+  })
+
+  return {
+    ok: true,
+    data: {
+      projectId,
+      projectName: p.name,
+      photoCount: p.photoCount || 0,
+      packageCount: typeof p.packageCount === 'number' ? p.packageCount : 0,
+      status: p.status,
+      expireAt: p.expireAt || 0,
+      models,
     },
   }
 }
@@ -537,14 +775,21 @@ async function updateModelSummary(projectId, modelId, patch) {
 
   const all = models.length > 0 && models.every((m) => m.status === '已提交')
   if (all) update.status = 'SELECTION_SUBMITTED'
-  else if (p.status !== 'SELECTION_SUBMITTED') update.status = 'SELECTING'
+  // 归档项目不能被模特的保存动作拉回 SELECTING（31_STATE_MACHINE 2.5）
+  else if (p.status !== 'SELECTION_SUBMITTED' && p.status !== 'ARCHIVED') {
+    update.status = 'SELECTING'
+  }
 
   await db.collection('project').doc(projectId).update({ data: update })
   return models
 }
 
-/** 临时链接有效期：24 小时（配合端上缓存，同一项目重复打开不再重复取链接） */
-const TEMP_URL_MAX_AGE = 24 * 3600 * 1000
+/** 临时链接有效期：24 小时（maxAge 单位是「秒」，官方默认 86400）。
+ *  注意：wx-server-sdk 的 getTempFileURL 签名是 fileList: string[]，传
+ *  {fileID, maxAge} 时 maxAge 不保证生效；私有读文件的临时链接实测只有约
+ *  10 分钟有效期（链接里的 t 参数就是到期时刻）。端上按链接自带 t 判断新鲜度
+ *  （见 services/urlcache.ts），不要写死长 TTL（与 photo 同一套口径） */
+const TEMP_URL_MAX_AGE = 86400
 
 /** 批量取临时链接（getTempFileURL 单次最多 50 个） */
 async function tempUrls(fileIDs) {

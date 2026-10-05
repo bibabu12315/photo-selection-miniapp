@@ -6,7 +6,18 @@
     模特在微信里看图、选片、提交
   </view>
 
-  <view wx:if="{{checking}}" class="block">
+  <!-- 扫码登录认领结果（T-P1-2）：不跳转，停在原地提示回电脑 -->
+  <view wx:if="{{claimState}}" class="block">
+    <view wx:if="{{claimState === 'ok'}}" class="claim-ok">✓ 登录成功</view>
+    <view wx:else class="err">{{claimError}}</view>
+    <view wx:if="{{claimState === 'ok'}}" class="tip">
+      请回到电脑上的控制台页面，网页会自动进入工作台<br />
+      这个页面可以直接关闭
+    </view>
+    <view wx:else class="tip">回到电脑上点击「刷新二维码」，再扫一次即可</view>
+  </view>
+
+  <view wx:elif="{{checking}}" class="block">
     <view class="tip">正在确认身份…</view>
   </view>
 
@@ -22,11 +33,22 @@
       </view>
     </view>
 
+    <view class="divider"><text>或</text></view>
+
     <view class="block">
-      <view class="btn ghost">我是模特</view>
+      <view class="sub-title">我是模特</view>
+      <input
+        class="input"
+        placeholder="粘贴摄影师发给你的邀请链接"
+        placeholder-class="ph"
+        confirm-type="go"
+        bindinput="onLinkInput"
+        bindconfirm="openInviteLink"
+      />
+      <view class="btn ghost" bindtap="openInviteLink">用链接进入</view>
       <view class="tip">
-        请使用摄影师通过微信发给你的链接或二维码进入<br />
-        首次进入后，这个微信号会自动记住你，以后打开小程序就能看到你的全部拍摄
+        没有链接？向摄影师要一条邀请链接，或让他发你小程序码<br />
+        首次进入后，这个微信号会记住你，以后打开小程序就能看到你的全部拍摄
       </view>
     </view>
   </block>

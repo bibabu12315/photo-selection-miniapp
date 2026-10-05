@@ -4,8 +4,6 @@ export type ProjectStatus =
   | 'UPLOADING'
   | 'SELECTING'
   | 'SELECTION_SUBMITTED'
-  | 'COMPLETED'
-  | 'EXPIRED'
   /** 已归档：大图已清理，只留缩略图和选片记录 */
   | 'ARCHIVED'
 

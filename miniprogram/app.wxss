@@ -1,18 +1,39 @@
+/* 设计 token（54 文档第 1 节 · 与网页端同值，仅单位换成 rpx：1px ≈ 1.8rpx） */
 page {
+  --fg: #1a1a18;
+  --fg2: #55544e;
+  --muted: #8a897f;
+  --page: #f4f4f2;
+  --panel: #ffffff;
+  --line: #e5e4df;
+  --line2: #d8d7d0;
+
+  /* 照片区深底（新）：不是纯黑，留一点暖灰 */
+  --dark: #1c1c1a;
+  --dark2: #262624;
+  --dark-line: #3a3a36;
+
+  --ok: #2f7d4f;
+  --warn: #9a6b00;
+  --info: #3a5fa8;
+  --err: #b03a32;
+
+  /* 圆角：卡片 14px / 控件 8px / 徽标全圆 */
+  --r-card: 26rpx;
+  --r-ctl: 14rpx;
+  --r-pill: 999rpx;
+
+  /* 旧名保留：现有页面样式仍引用，值统一对齐上面这套 */
   --bg: #ffffff;
-  --page: #f6f6f6;
-  --fg: #1a1a1a;
-  --fg2: #4a4a4a;
-  --muted: #8a8a8a;
-  --line: #e8e8e8;
-  --line2: #d8d8d8;
-  --chip: #f2f2f2;
-  --green: #1d9e75;
-  --green-bg: #e1f5ee;
-  --amber: #ba7517;
-  --amber-bg: #faeeda;
-  --red: #e24b4a;
-  --red-bg: #fcebeb;
+  --chip: #f2f2f0;
+  --ok-bg: #e4f0e8;
+  --err-bg: #fbedeb;
+  --green: #2f7d4f;
+  --green-bg: #e4f0e8;
+  --amber: #9a6b00;
+  --amber-bg: #f7efdc;
+  --red: #b03a32;
+  --red-bg: #fbedeb;
 
   background: var(--bg);
   color: var(--fg);

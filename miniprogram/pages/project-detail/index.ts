@@ -6,11 +6,12 @@ import {
   removeProject,
   createInvite,
   removeInvite,
+  setInviteNotify,
   getInviteQrCode,
   InviteItem,
 } from '../../services/project'
 import { shootText, expireText, packageText, formatTime } from '../../utils/format'
-import { UPLOAD_PAGE_URL } from '../../env'
+import { UPLOAD_PAGE_URL, SUBSCRIBE_TPL_ID } from '../../env'
 import { Project } from '../../types'
 import { clearProject } from '../../services/urlcache'
 
@@ -33,6 +34,8 @@ interface ModelVM {
   status: string
   statusClass: string
   progress: string
+  /** true = 还没授权通知，显示「通知我」按钮 */
+  needNotify: boolean
 }
 
 Page({
@@ -44,6 +47,8 @@ Page({
     expire: '',
     pkg: '',
     note: '',
+    /** 状态进度条：上传 → 选片 → 提交 → 导出（派生，不落库，BR-204） */
+    steps: [] as { text: string; done: boolean }[],
 
     /** ① 照片 */
     hasCode: false,
@@ -95,8 +100,10 @@ Page({
     const p: Project = res.data.project
     const invites: InviteItem[] = res.data.invites || []
     const tokenMap: Record<string, string> = {}
+    const notifyMap: Record<string, boolean> = {}
     invites.forEach((i) => {
       tokenMap[i.modelId] = i.token
+      notifyMap[i.modelId] = !!i.notifyAuth
     })
 
     const models: ModelVM[] = (p.models || []).map((m) => ({
@@ -111,18 +118,29 @@ Page({
         m.status === '已提交'
           ? `已提交 ${m.selectedCount} 张`
           : `已选 ${m.selectedCount} / ${packageText(p.packageCount)}`,
+      needNotify: !notifyMap[m.modelId],
     }))
+
+    const submittedCount = (p.models || []).filter((m) => m.status === '已提交').length
+    // 状态进度条：四步全部由现有字段派生，不新增存储状态（BR-204 / B-3）
+    const steps = [
+      { text: '上传', done: (p.photoCount || 0) > 0 },
+      { text: '选片', done: (p.models || []).some((m) => m.selectedCount > 0) },
+      { text: '提交', done: submittedCount > 0 },
+      { text: '导出', done: models.length > 0 && submittedCount === models.length },
+    ]
 
     const hasCode = !!p.uploadCode && p.uploadCodeExpireAt > Date.now()
     this.setData({
       project: p,
+      steps,
       shoot: shootText(p.shootDate),
       expire: expireText(p.expireAt),
       pkg: packageText(p.packageCount),
       note: p.note || '',
       models,
       modelCountText: `${models.length} / ${MAX_MODELS}`,
-      submittedCount: (p.models || []).filter((m) => m.status === '已提交').length,
+      submittedCount,
       hasCode,
       code: hasCode ? p.uploadCode : '——',
       codeExpireText: hasCode ? formatTime(p.uploadCodeExpireAt) : '',
@@ -246,6 +264,32 @@ Page({
     })
   },
 
+  /**
+   * 「通知我」：为她开启一次提交通知（T-P2-3）
+   * 微信规则：一次授权 = 一次推送；她提交时消耗这一次，之后想再收要点第二次
+   */
+  tapNotify(this: any, e: any) {
+    const idx = Number(e.currentTarget.dataset.index)
+    const m = this.data.models[idx]
+    if (!m || !m.inviteId) return
+    ;(wx as any).requestSubscribeMessage({
+      tmplIds: [SUBSCRIBE_TPL_ID],
+      success: async (r: any) => {
+        if (r[SUBSCRIBE_TPL_ID] !== 'accept') {
+          ;(wx as any).showToast({ title: '已取消，她提交时不会提醒你', icon: 'none' })
+          return
+        }
+        const res = await setInviteNotify(m.inviteId)
+        if (!res.ok) {
+          ;(wx as any).showModal({ title: '登记失败', content: res.error || '', showCancel: false })
+          return
+        }
+        ;(wx as any).showToast({ title: `已开启，${m.name} 提交时会提醒你`, icon: 'none' })
+        await this.load()
+      },
+    })
+  },
+
   async makeQrCode(this: any, e: any) {
     const idx = Number(e.currentTarget.dataset.index)
     const m = this.data.models[idx]
@@ -290,7 +334,12 @@ Page({
   noop() {},
 
   openResult(this: any) {
-    ;(wx as any).navigateTo({ url: '/pages/selection-result/index?id=' + this.data.id })
+    ;(wx as any).navigateTo({ url: '/pages/selection-result/index?id=' + this.data.id + '&view=list' })
+  },
+
+  /** 照片墙（B-4 的页面：默认进照片墙视图，与网页端一致） */
+  openWall(this: any) {
+    ;(wx as any).navigateTo({ url: '/pages/selection-result/index?id=' + this.data.id + '&view=wall' })
   },
 
   /* ---------- 其他 ---------- */

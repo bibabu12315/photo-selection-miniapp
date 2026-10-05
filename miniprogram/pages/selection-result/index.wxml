@@ -1,66 +1,175 @@
 <view class="page">
-  <view wx:if="{{loading && photos.length === 0}}" class="empty">加载中…</view>
+  <view wx:if="{{loading && photos.length === 0 && wallPhotos.length === 0}}" class="empty">加载中…</view>
+
+  <!-- 错误态（F-23）：文案 + 重试入口，而不是只有一个弹窗 -->
+  <view wx:elif="{{loadError}}" class="empty">
+    {{loadError}}
+    <view class="retry" bindtap="retryLoad">点此重试</view>
+  </view>
 
   <block wx:else>
-    <!-- 模特切换 -->
-    <view class="tabs" wx:if="{{tabs.length > 0}}">
-      <view
-        class="tab {{item.active ? 'on' : ''}}"
-        wx:for="{{tabs}}"
-        wx:key="modelId"
-        data-id="{{item.modelId}}"
-        bindtap="switchModel"
-      >{{item.label}}</view>
-    </view>
+    <!-- ============ 照片墙视图（默认，与网页端同构：两行导航 + 瀑布流） ============ -->
+    <block wx:if="{{view === 'wall'}}">
+      <!-- 固定在顶部的导航区：第一行筛选 Tab，第二行搜索，第三行模特 chips（仅「已选」） -->
+      <view class="wall-head">
+        <view class="filters">
+          <view class="f {{filter === 'all' ? 'on' : ''}}" data-f="all" bindtap="switchFilter">全部</view>
+          <view class="f {{filter === 'selected' ? 'on' : ''}}" data-f="selected" bindtap="switchFilter">已选</view>
+          <view class="f {{filter === 'unselected' ? 'on' : ''}}" data-f="unselected" bindtap="switchFilter">未选</view>
+          <view class="f-count">{{wallPhotos.length}} / {{wallTotal}}</view>
+        </view>
 
-    <view wx:if="{{tabs.length === 0}}" class="empty">
-      这个项目还没有邀请模特
-      <view class="empty-sub">回到项目详情，在「② 模特」里先邀请模特</view>
-    </view>
+        <view class="wsearch">
+          <input
+            class="wsearch-input"
+            placeholder="搜文件名（在已加载的照片里找）"
+            value="{{kw}}"
+            bindinput="onSearchInput"
+            confirm-type="search"
+          />
+          <view class="wsearch-clear" wx:if="{{kw}}" bindtap="clearSearch">×</view>
+        </view>
 
-    <block wx:elif="{{photos.length === 0}}">
-      <view class="empty">
-        {{currentName}} 还没有提交选片
-        <view class="empty-sub">她提交后，这里会显示选中的照片和文件名</view>
+        <view class="chips" wx:if="{{filter === 'selected' && wallModels.length > 0}}">
+          <view class="chip {{wallModelId === '' ? 'on' : ''}}" data-m="" bindtap="pickModel">全部模特</view>
+          <view
+            class="chip {{wallModelId === item.modelId ? 'on' : ''}}"
+            wx:for="{{wallModels}}"
+            wx:key="modelId"
+            data-m="{{item.modelId}}"
+            bindtap="pickModel"
+          >{{item.displayName}} {{item.selectedCount}}</view>
+        </view>
+      </view>
+
+      <view class="masonry" wx:if="{{colA.length > 0 || colB.length > 0}}">
+        <view class="col">
+          <view
+            class="cell {{item.selectedBy.length > 0 ? 'on' : ''}}"
+            wx:for="{{colA}}"
+            wx:key="_id"
+            style="height: {{item.h}}rpx"
+            data-id="{{item._id}}"
+            bindtap="onCellTap"
+          >
+            <image
+              class="cell-img"
+              src="{{item.thumbUrl}}"
+              mode="aspectFill"
+              lazy-load="{{true}}"
+              data-id="{{item._id}}"
+              binderror="onImgError"
+            />
+            <!-- 临时链接过期/取链失败：自动换一条重试，仍失败才给手动入口 -->
+            <view class="cell-fail" wx:if="{{item.failed}}" data-id="{{item._id}}" catchtap="retryImg">
+              没加载出来<text class="cf-btn">点此重试</text>
+            </view>
+            <view class="cell-tag" wx:if="{{item.selectedNames}}">{{item.selectedNames}}</view>
+            <view class="cell-name">{{item.filename}}</view>
+          </view>
+        </view>
+
+        <view class="col">
+          <view
+            class="cell {{item.selectedBy.length > 0 ? 'on' : ''}}"
+            wx:for="{{colB}}"
+            wx:key="_id"
+            style="height: {{item.h}}rpx"
+            data-id="{{item._id}}"
+            bindtap="onCellTap"
+          >
+            <image
+              class="cell-img"
+              src="{{item.thumbUrl}}"
+              mode="aspectFill"
+              lazy-load="{{true}}"
+              data-id="{{item._id}}"
+              binderror="onImgError"
+            />
+            <!-- 临时链接过期/取链失败：自动换一条重试，仍失败才给手动入口 -->
+            <view class="cell-fail" wx:if="{{item.failed}}" data-id="{{item._id}}" catchtap="retryImg">
+              没加载出来<text class="cf-btn">点此重试</text>
+            </view>
+            <view class="cell-tag" wx:if="{{item.selectedNames}}">{{item.selectedNames}}</view>
+            <view class="cell-name">{{item.filename}}</view>
+          </view>
+        </view>
+      </view>
+
+      <view wx:if="{{loadingMore}}" class="more">加载中…</view>
+      <view wx:elif="{{wallError}}" class="more retry" bindtap="retryWall">加载失败，点此重试</view>
+      <view wx:elif="{{colA.length === 0 && colB.length === 0 && !loadingMore}}" class="more">
+        {{kw ? '没有匹配「' + kw + '」的照片' : (wallTotal === 0 ? '还没有照片，照片要在电脑上批量上传' : '这个筛选下没有照片')}}
+        <!-- E-3：空态给一个能点的下一步，别只写一行字 -->
+        <view wx:if="{{!kw && wallTotal === 0}}" class="more-btn" bindtap="goDetail">回项目详情 ›</view>
+      </view>
+      <view wx:elif="{{!hasMore && wallPhotos.length > 0}}" class="more">已经到底啦</view>
+
+      <view class="bottom-space"></view>
+      <view class="bar">
+        <view class="bar-btn" bindtap="switchView">查看选片清单（文件名）</view>
       </view>
     </block>
 
+    <!-- ============ 清单视图：模特切换 + 已选文件名（核心交付物） ============ -->
     <block wx:else>
-      <view class="head">
-        <view class="count">
-          {{currentName}} 已选 <text class="num">{{selectedCount}}</text> 张
-        </view>
-        <view class="meta">套餐 {{pkg}} · {{submittedText}}</view>
-        <view class="head-btns">
-          <view class="mini-btn" bindtap="switchView">{{view === 'list' ? '网格' : '列表'}}</view>
-          <view class="mini-btn" bindtap="copyAll">复制全部文件名</view>
-        </view>
+      <!-- 模特切换 -->
+      <view class="tabs" wx:if="{{tabs.length > 0}}">
+        <view
+          class="tab {{item.active ? 'on' : ''}}"
+          wx:for="{{tabs}}"
+          wx:key="modelId"
+          data-id="{{item.modelId}}"
+          bindtap="switchModel"
+        >{{item.label}}</view>
       </view>
 
-      <view wx:if="{{view === 'list'}}" class="list">
-        <view class="row" wx:for="{{photos}}" wx:key="_id">
-          <image class="row-thumb" src="{{item.thumbUrl}}" mode="aspectFill" lazy-load="{{true}}" />
-          <view class="row-name">{{item.filename}}</view>
-          <view class="row-idx">{{index + 1}}</view>
-        </view>
+      <view wx:if="{{tabs.length === 0}}" class="empty">
+        这个项目还没有邀请模特
+        <view class="empty-sub">回到项目详情，在「② 模特」里先邀请模特</view>
       </view>
 
-      <view wx:else class="grid">
-        <view class="cell" wx:for="{{photos}}" wx:key="_id">
-          <image class="cell-img" src="{{item.thumbUrl}}" mode="aspectFill" lazy-load="{{true}}" />
+      <block wx:elif="{{photos.length === 0}}">
+        <view class="empty">
+          {{currentName}} 还没有提交选片
+          <view class="empty-sub">她提交后，这里会显示选中的照片和文件名</view>
+          <view class="retry" bindtap="switchView">去照片墙看看 ›</view>
         </view>
-      </view>
+      </block>
 
-      <view class="note">
-        文件名与相机原名一致（按文件名升序）。精修时在 Lightroom 里按文件名对照找 ARW。
+      <block wx:else>
+        <view class="head">
+          <view class="count">
+            {{currentName}} 已选 <text class="num">{{selectedCount}}</text> 张
+          </view>
+          <view class="meta">套餐 {{pkg}} · {{submittedText}}</view>
+          <view class="head-btns">
+            <view class="mini-btn" bindtap="copyAll">复制全部文件名</view>
+          </view>
+        </view>
+
+        <view class="list">
+          <!-- 点行看大图：与照片墙同一条服务端取链；系统查看器自带双指缩放 -->
+          <view class="row" wx:for="{{photos}}" wx:key="_id" data-id="{{item._id}}" bindtap="onRowTap">
+            <image class="row-thumb" src="{{item.thumbUrl}}" mode="aspectFill" lazy-load="{{true}}" />
+            <view class="row-name">{{item.filename}}</view>
+            <view class="row-idx">{{index + 1}}</view>
+          </view>
+        </view>
+
+        <view class="note">
+          文件名与相机原名一致（按文件名升序）。精修时在 Lightroom 里按文件名对照找 ARW。
+        </view>
+      </block>
+
+      <view class="bottom-space"></view>
+      <view class="bar bar-two">
+        <view class="bar-btn bar-half" bindtap="switchView">照片墙</view>
+        <view
+          class="bar-btn bar-half ghost {{resetting ? 'disabled' : ''}}"
+          bindtap="reopen"
+        >重新开放选片</view>
       </view>
     </block>
-
-    <view class="bottom-space"></view>
-    <view class="bar">
-      <view class="bar-btn ghost {{resetting ? 'disabled' : ''}}" bindtap="reopen">
-        {{currentName ? '重新开放「' + currentName + '」的选片' : '重新开放选片'}}
-      </view>
-    </view>
   </block>
 </view>

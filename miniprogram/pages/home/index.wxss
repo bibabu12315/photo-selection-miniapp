@@ -23,19 +23,87 @@
   margin-top: 12rpx;
 }
 
-.fab {
-  position: fixed;
-  right: 32rpx;
-  bottom: 64rpx;
-  background: #1a1a1a;
-  color: #ffffff;
-  font-size: 28rpx;
-  padding: 20rpx 32rpx;
-  border-radius: 999rpx;
-  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.18);
-  z-index: 10;
+/* 顶部引导条（D-1）：主色描边 + 实心按钮，一进页面就能看见「去电脑」这条路 */
+.guide-bar {
+  background: #f3f8f5;
+  border: 2rpx solid #2f7d4f;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
 }
 
-.fab:active {
+.guide-t {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #245c3c;
+  line-height: 1.6;
+}
+
+.guide-d {
+  font-size: 22rpx;
+  color: #5b7d6a;
+  margin-top: 6rpx;
+}
+
+.guide-btn {
+  display: inline-block;
+  margin-top: 16rpx;
+  padding: 12rpx 32rpx;
+  background: #2f7d4f;
+  color: #ffffff;
+  font-size: 26rpx;
+  border-radius: 8rpx;
+}
+
+.guide-btn:active {
   opacity: 0.85;
+}
+
+/* 两个 chip 并排时留缝 */
+.row .chip + .chip {
+  margin-left: 8rpx;
+}
+
+/* 模特提交进度：一眼看出「几位交了 / 共几位」 */
+.pbar {
+  height: 6rpx;
+  margin-top: 16rpx;
+  border-radius: 999rpx;
+  background: #ececec;
+  overflow: hidden;
+}
+
+.pbar-in {
+  height: 100%;
+  border-radius: 999rpx;
+  background: #2f7d4f;
+}
+
+/* 卡片上的「去电脑」线索：只是跳转提示，不是上传入口（BR-1204） */
+.pc-link {
+  margin-top: 14rpx;
+  font-size: 24rpx;
+  color: #2f7d4f;
+}
+
+/* E-3：空态里的下一步按钮（不能只写「暂无数据」） */
+.empty-btn {
+  display: inline-block;
+  margin-top: 24rpx;
+  padding: 16rpx 44rpx;
+  font-size: 27rpx;
+  color: #fff;
+  background: #2f7d4f;
+  border-radius: 999rpx;
+}
+
+/* E-4：快到期 / 已过期时卡片上的续期入口（止损按钮，做成实心主色） */
+.extend-btn {
+  display: inline-block;
+  margin-top: 16rpx;
+  padding: 14rpx 32rpx;
+  font-size: 26rpx;
+  color: #fff;
+  background: #c0392b;
+  border-radius: 999rpx;
 }

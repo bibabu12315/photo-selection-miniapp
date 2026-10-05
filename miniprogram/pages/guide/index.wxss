@@ -30,6 +30,33 @@
   text-align: center;
 }
 
+/* 摄影师 / 模特两个分支之间的分隔线 */
+.divider {
+  display: flex;
+  align-items: center;
+  margin-top: 56rpx;
+  color: var(--muted);
+  font-size: 22rpx;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1rpx;
+  background: var(--line);
+}
+
+.divider text {
+  padding: 0 20rpx;
+}
+
+.sub-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  margin-bottom: 20rpx;
+}
+
 .input {
   background: #f6f6f6;
   border: 1rpx solid var(--line);
@@ -38,6 +65,11 @@
   font-size: 28rpx;
   text-align: center;
   margin-bottom: 20rpx;
+}
+
+.ph {
+  color: #bbbbbb;
+  font-size: 26rpx;
 }
 
 .tip {
@@ -51,4 +83,10 @@
   font-size: 24rpx;
   color: var(--red);
   margin-top: 12rpx;
+}
+
+.claim-ok {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: var(--green);
 }
