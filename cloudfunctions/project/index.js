@@ -181,6 +181,31 @@ async function listProjects(openid) {
       }
     }
   }
+  // 封面兜底：老项目 / 旧上传链路没写过 coverThumbs，列表时从 photo 集合一次性补齐
+  // （只读不写库；每项目取 sortOrder 最早的前 3 张缩略图 fileID，前端再批量换临时链接）
+  const needCover = projects.filter((p) => !(p.coverThumbs || []).length && (p.photoCount || 0) > 0)
+  if (needCover.length) {
+    try {
+      const ph = await db
+        .collection('photo')
+        .where({ projectId: _.in(needCover.map((p) => p._id)) })
+        .field({ projectId: 1, thumbFileID: 1, sortOrder: 1 })
+        .orderBy('sortOrder', 'asc')
+        .limit(500)
+        .get()
+      const byProj = {}
+      for (const d of ph.data || []) {
+        if (!d.thumbFileID) continue
+        const arr = byProj[d.projectId] || (byProj[d.projectId] = [])
+        if (arr.length < 3) arr.push(d.thumbFileID)
+      }
+      needCover.forEach((p) => {
+        if ((byProj[p._id] || []).length) p.coverThumbs = byProj[p._id]
+      })
+    } catch (e) {
+      // 封面补齐失败不影响列表返回
+    }
+  }
   return { ok: true, data: { projects } }
 }
 

@@ -3,7 +3,7 @@
 
    ⚠ UI 2.0 迁移后：本文件只保留「几个页面共用的老控件」 ——
      .hidden / .cs-btn / .cs-modal* / .cs-field / .cs-err / .cs-sub
-     .qt-* .qv-*（画质对比弹窗，quality.js）/ .up-opt（弹窗里的下拉）/ .up-done-t/.up-done-d
+     .qtd-*（画质对比弹窗，quality.js，UI 2.0 SECTION 10 深色工作台）/ .wm-*（平铺水印）/ .up-opt / .up-done-t/.up-done-d
      .lg-skeleton / .lg-state（登录）/ .rs-note（quality.js 里的注释行）
    控制台各页面（工作台 / 项目 / 详情照片墙 / 上传抽屉 / 大图 / 结果页）
    已全部迁到 console-v2.css，这里的 cs-proj-* / pd-* / pw-* / up-drawer / rs-* 等规则是死代码，
@@ -952,55 +952,225 @@ body.solo .cs-side {
   word-break: break-all;
 }
 
-/* ---------- 画质预览对比（T-P1-5） ---------- */
+/* ---------- 画质预览对比（T-P1-5 · UI 2.0 SECTION 10） ---------- */
+/* 依据：docs/ui-redesign/web-ui-v2.html SECTION 10 —— PS「存储为 Web」式深色全屏工作台。
+   层级规范：scrim 40 < mini-bar 45 < drawer 50 < 画质对比 70 < Lightbox 90 < toast 150 */
 
-.qt-zoom-ops {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: 4px;
-}
-.qt-zoom-now {
-  font-size: 12px;
-  color: var(--muted);
-  min-width: 56px;
-}
-
-.qt-duo {
+.qtd-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(12, 12, 10, 0.62);
   display: flex;
-  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
 }
-.qt-duo .qv {
-  position: relative;
-  flex: 1;
-  height: 440px;
+.qtd {
+  width: min(1380px, 96vw);
+  height: min(860px, 90vh);
+  background: #151513;
+  border: 1px solid #32322d;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  background: #101010;
+  color: #ededE8;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+}
+.qtd-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #32322d;
+  flex: 0 0 auto;
+}
+.qtd-head h3 { font-size: 15px; font-weight: 600; margin: 0; color: #f2f1ed; }
+.qtd-head .sub { font-size: 12px; color: #8e8c84; }
+.qtd-head .ops { margin-left: auto; display: flex; gap: 8px; }
+
+.qbtn {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  border: 1px solid #3a3a34;
+  background: transparent;
+  color: #c9c7bf;
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+.qbtn:hover { background: #262622; color: #f2f1ed; }
+.qbtn.pri { background: #f2f1ed; color: #1c1c1a; border-color: #f2f1ed; font-weight: 500; }
+.qbtn.pri:hover { background: #fff; }
+.qbtn.on { background: #2e2e29; color: #f2f1ed; border-color: #4a4a42; }
+
+.qtd-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px;
+  border-bottom: 1px solid #32322d;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+}
+.qtd-sel { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #8e8c84; }
+.qtd-sel select {
+  height: 30px;
+  background: #1e1e1b;
+  color: #ededE8;
+  border: 1px solid #3a3a34;
+  border-radius: 6px;
+  padding: 0 8px;
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.qtd-zoom { display: flex; gap: 4px; margin-left: auto; align-items: center; }
+.qtd-zoom .znow { font-size: 11.5px; color: #8e8c84; margin-left: 8px; min-width: 60px; }
+
+.qtd-duo { flex: 1; display: flex; gap: 4px; padding: 16px 20px 8px; min-height: 0; }
+.qtd-vp {
+  flex: 1;
+  position: relative;
+  background: #0d0d0c;
+  border: 1px solid #2a2a26;
   border-radius: 8px;
+  overflow: hidden;
   cursor: grab;
+  min-width: 0;
 }
-.qt-duo .qv.grabbing {
-  cursor: grabbing;
-}
-.qv-img {
+.qtd-vp.grabbing { cursor: grabbing; }
+.qtd-img {
   position: absolute;
   display: block;
   max-width: none;
+  transform-origin: 0 0;
   user-select: none;
   -webkit-user-drag: none;
+  will-change: width, height, left, top;
 }
-.qv-tag {
+.qtd-vp .lo {
   position: absolute;
   left: 10px;
   top: 10px;
-  z-index: 2;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  font-size: 12px;
+  z-index: 3;
+  background: rgba(18, 18, 16, 0.78);
+  font-size: 11.5px;
+  color: #ededE8;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: 999px;
   pointer-events: none;
-  white-space: nowrap;
+}
+.qtd-vp .lo b { font-weight: 600; }
+.qtd-stat {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 6px 12px;
+  background: rgba(13, 13, 12, 0.82);
+  border-top: 1px solid #262622;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: #a9a79e;
+  pointer-events: none;
+}
+.qtd-stat b { color: #ededE8; font-weight: 600; }
+
+.qtd-tip {
+  flex: 0 0 auto;
+  padding: 6px 20px 0;
+  font-size: 11.5px;
+  color: #8e8c84;
+  text-align: center;
+  margin: 0;
+}
+.qtd-cards {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px 20px 6px;
+}
+.qtd-card {
+  background: #1e1e1b;
+  border: 1px solid #2e2e29;
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: border-color 0.14s, background 0.14s;
+}
+.qtd-card:hover { border-color: #4a4a42; }
+.qtd-card.on { border-color: #4caf7d; background: #22271f; box-shadow: inset 0 0 0 1px #4caf7d; }
+.qtd-card .t { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f2f1ed; }
+.qtd-card .t .dot { width: 6px; height: 6px; border-radius: 50%; background: #4a4a42; flex: 0 0 auto; }
+.qtd-card.on .t .dot { background: #4caf7d; }
+.qtd-card .d { font-size: 11px; color: #8e8c84; margin-top: 4px; font-family: var(--mono); line-height: 1.5; }
+.qtd-card .d b { color: #c9c7bf; font-weight: 500; }
+.qtd-sum {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 20px 14px;
+  font-size: 12px;
+  color: #a9a79e;
+}
+.qtd-sum b { color: #f2f1ed; }
+.qtd-sum .rs-note { font-size: 11px; color: #6b6960; }
+.qtd-foot-note { font-size: 11px; color: #6b6960; margin-left: auto; }
+
+/* 自定义清晰度单滑条（弹窗内，与上传抽屉实时互通） */
+.qtd-custom {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px 10px;
+  font-size: 12px;
+  color: #a9a79e;
+}
+.qtd-custom input[type='range'] { flex: 1; accent-color: #ededE8; height: 20px; }
+.qtd-custom b { color: #f2f1ed; font-family: var(--mono); font-weight: 600; min-width: 110px; }
+.qtd-custom .hint { font-size: 11px; color: #6b6960; }
+
+/* 满屏斜向平铺水印（抽屉输入 → 抽屉预览 + 弹窗两视口同步） */
+.wm-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  background-repeat: repeat;
+}
+.wm-demo {
+  position: relative;
+  height: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line2);
+  margin-top: 10px;
+  background: #cfcec8;
+}
+.wm-demo .ph { position: absolute; inset: 0; }
+.wm-demo .wm-cover { border-radius: 0; }
+.wm-tag {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  z-index: 3;
+  font-size: 10.5px;
+  color: #fff;
+  background: rgba(18, 18, 16, 0.62);
+  padding: 2px 8px;
+  border-radius: 999px;
 }
 
 /* 缩放按钮选中态 */

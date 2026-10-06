@@ -17,12 +17,13 @@ window.PhotoUploader = (function () {
   const THUMB_QUALITY = 0.7
 
   /**
-   * 画质四档（30_BUSINESS_RULES 常量表 / 24_FILE_STORAGE 3.1），默认 standard
+   * 画质四档 + 自定义（30_BUSINESS_RULES 常量表 / 24_FILE_STORAGE 3.1），默认 hd
+   * 标清 1200 / 高清 1600 / 高清 Pro 2880 / 原画质 4096（standard 为旧档位名，仅存档兼容）
    * perMb = 单张 preview 参考体积，供画质预览估算「这批 N 张 ≈ XXX MB」（不含缩略图）
    */
   const PRESETS = {
-    standard: { longEdge: 1600, quality: 0.75, perMb: 0.25, label: '标准（推荐 · 省流量）' },
-    hd: { longEdge: 2048, quality: 0.82, perMb: 0.55, label: '高清' },
+    low: { longEdge: 1200, quality: 0.55, perMb: 0.14, label: '标清（最省流量）' },
+    hd: { longEdge: 1600, quality: 0.75, perMb: 0.25, label: '高清（推荐）' },
     hdpro: { longEdge: 2880, quality: 0.9, perMb: 1.2, label: '高清 Pro' },
     raw: { longEdge: 4096, quality: 0.92, perMb: 2.2, label: '原画质（占用大）' },
     custom: { longEdge: 1600, quality: 0.75, perMb: 0.25, label: '自定义' },
@@ -107,7 +108,8 @@ window.PhotoUploader = (function () {
       })
     )
 
-    dz.addEventListener('drop', async (e) => {
+    // 拖放处理抽成函数：拖到「拖动框」或抽屉任意位置都能加照片
+    async function handleDrop(e) {
       if (uploading) return
       const dropped = []
       const entries = []
@@ -121,7 +123,18 @@ window.PhotoUploader = (function () {
       }
       for (const entry of entries) await traverseEntry(entry, dropped, '')
       collectFiles(dropped)
-    })
+    }
+    dz.addEventListener('drop', handleDrop)
+
+    // 整个抽屉兜底：拖到抽屉里但没对准拖动框也能收（浏览器默认行为是直接打开图片）
+    const drawer = document.getElementById('upDrawer')
+    if (drawer) {
+      drawer.addEventListener('dragover', (e) => e.preventDefault())
+      drawer.addEventListener('drop', (e) => {
+        e.preventDefault()
+        handleDrop(e)
+      })
+    }
   }
 
   async function traverseEntry(entry, out, path) {
@@ -182,6 +195,27 @@ window.PhotoUploader = (function () {
     }
     sortItems()
     renderSummary(skipped)
+    // 拖完立刻看得见：把缩略图墙滚进视野 + toast 提示，不用等点「开始上传」
+    if (items.length) {
+      const wall = $('upWall')
+      if (wall && wall.scrollIntoView) {
+        wall.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }
+      if (window.showToast) showToast('已添加 ' + items.length + ' 张，缩略图在下方')
+    }
+  }
+
+  /** 清空本批照片（再次打开上传抽屉时由 console.js 调用，避免上一批残留） */
+  function resetItems() {
+    if (uploading) return
+    items.forEach((i) => URL.revokeObjectURL(i.url))
+    items = []
+    lastSkipped = 0
+    if (!ctx) return
+    $('upFail').textContent = ''
+    $('upDone').classList.add('hidden')
+    $('upBar').style.width = '0'
+    renderSummary(0)
   }
 
   function stemOf(name) {
@@ -223,6 +257,7 @@ window.PhotoUploader = (function () {
       files: items.map((i) => i.file),
       count: items.length,
       preset: $('upPreset').value,
+      watermark: $('upWatermark') ? $('upWatermark').value.trim() : '',
       onPick: function (key) {
         $('upPreset').value = key
         renderSummary()
@@ -246,10 +281,46 @@ window.PhotoUploader = (function () {
   /* ---------- 上传 ---------- */
 
   function currentSpec() {
-    return Object.assign({}, PRESETS[$('upPreset').value] || PRESETS.standard)
+    return Object.assign({}, PRESETS[$('upPreset').value] || PRESETS.hd)
   }
 
-  /** 自定义档：把滑条的值写进 PRESETS.custom（console.js 的滑条调用），返回当前值 */
+  /* ---------- 自定义档：单滑条 t（0~200），下限更低（1200/0.55），标准正好在中间，上限原画质 ----------
+     单源：上传抽屉滑条与「画质对比」弹窗滑条都写进同一个 customT，两边实时互通（UI 2.0 SECTION 10）。 */
+
+  let customT = 100 // 默认 = 标准（滑条正中间）
+
+  /** 三个锚点：0 = 下限（800 / q0.42 ≈ 标清 1200/q0.55 的一半清晰度），100 = 高清，200 = 原画质 */
+  function customAnchors() {
+    return [
+      [800, 0.42],
+      [PRESETS.hd.longEdge, PRESETS.hd.quality],
+      [PRESETS.raw.longEdge, PRESETS.raw.quality],
+    ]
+  }
+
+  /** t ∈ [0,200] → { longEdge, quality }：标准档恒在滑条正中间（t=100） */
+  function specOfT(t) {
+    t = Math.min(200, Math.max(0, Number(t) || 0))
+    const seg = Math.min(1, Math.floor(t / 100))
+    const r = (t - seg * 100) / 100
+    const a = customAnchors()[seg]
+    const b = customAnchors()[seg + 1]
+    return {
+      longEdge: Math.round(a[0] + (b[0] - a[0]) * r),
+      quality: a[1] + (b[1] - a[1]) * r,
+    }
+  }
+
+  function setCustomT(t) {
+    customT = Math.min(200, Math.max(0, Number(t) || 0))
+    const s = specOfT(customT)
+    PRESETS.custom.longEdge = s.longEdge
+    PRESETS.custom.quality = s.quality
+    PRESETS.custom.perMb = 0.25 * (s.longEdge / 1600) * (s.quality / 0.75)
+    return Object.assign({}, PRESETS.custom)
+  }
+
+  /** 自定义档：直接写长边 / 画质（console.js 老接口，保留兼容） */
   function setCustomSpec(v) {
     if (v && Number(v.longEdge)) {
       PRESETS.custom.longEdge = Math.max(1200, Math.min(4096, Math.round(Number(v.longEdge))))
@@ -282,7 +353,7 @@ window.PhotoUploader = (function () {
     buildWall()
 
     const spec = currentSpec()
-    const presetKey = $('upPreset').value || 'standard'
+    const presetKey = $('upPreset').value || 'hd'
     const watermark = ($('upWatermark').value || '').trim()
     let cursor = 0
     const worker = async () => {
@@ -470,16 +541,35 @@ window.PhotoUploader = (function () {
     return { blob, width: w, height: h }
   }
 
+  /**
+   * 水印只有一款：全图 -24° 斜向平铺（截图裁不掉）。
+   * style 参数保留兼容旧签名（upload.js 旧页 / render 透传），一律按平铺处理。
+   */
   function drawWatermark(ctx2d, w, h, text) {
-    const size = Math.max(14, Math.round(Math.min(w, h) * 0.03))
-    ctx2d.font = `${size}px -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif`
-    ctx2d.textAlign = 'right'
-    ctx2d.textBaseline = 'bottom'
-    ctx2d.globalAlpha = 0.45
+    const minDim = Math.min(w, h)
+    const size = Math.max(20, Math.round(minDim * 0.06))
+    const stepX = Math.round(size * 9)
+    const stepY = Math.round(size * 6.5)
+    ctx2d.save()
+    ctx2d.translate(w / 2, h / 2)
+    ctx2d.rotate((-24 * Math.PI) / 180)
+    ctx2d.font = size + "px 'Segoe UI', 'Microsoft YaHei', sans-serif"
+    ctx2d.textAlign = 'center'
+    ctx2d.textBaseline = 'middle'
+    ctx2d.globalAlpha = 0.26
     ctx2d.fillStyle = '#ffffff'
-    ctx2d.shadowColor = 'rgba(0,0,0,0.5)'
-    ctx2d.shadowBlur = size / 4
-    ctx2d.fillText(text, w - size, h - size)
+    ctx2d.shadowColor = 'rgba(0,0,0,0.35)'
+    ctx2d.shadowBlur = size / 6
+    // 覆盖旋转后的整个对角半径，交错半步更自然
+    const R = Math.ceil(Math.sqrt(w * w + h * h) / 2) + stepX + stepY
+    let row = 0
+    for (let y = -R; y <= R; y += stepY, row++) {
+      const off = row % 2 ? stepX / 2 : 0
+      for (let x = -R + off; x <= R; x += stepX) {
+        ctx2d.fillText(text, x, y)
+      }
+    }
+    ctx2d.restore()
     ctx2d.globalAlpha = 1
     ctx2d.shadowBlur = 0
   }
@@ -498,6 +588,9 @@ window.PhotoUploader = (function () {
     unmount: unmount,
     presets: PRESETS,
     setCustomSpec: setCustomSpec,
+    setCustomT: setCustomT,
+    customT: () => customT,
+    resetItems: resetItems,
     busy: () => uploading,
   }
 })()

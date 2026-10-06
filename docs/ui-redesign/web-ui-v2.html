@@ -488,6 +488,66 @@ button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;backgrou
 .stage-scroll::-webkit-scrollbar-thumb{background:#C9C8C1;border-radius:4px}
 .info-body::-webkit-scrollbar,.dr-body::-webkit-scrollbar{width:6px}
 .info-body::-webkit-scrollbar-thumb,.dr-body::-webkit-scrollbar-thumb{background:#DCDCD6;border-radius:3px}
+
+/* ============================ SECTION 10 · 画质预览对比（PS「存储为 Web」式工作台） ============================ */
+/* 层级规范（与真实代码一致）：scrim 40 < drawer 50 < mini-bar 45 < 画质对比 70 < Lightbox 90 < toast 150 */
+.qtd-mask{position:fixed;inset:0;z-index:920;background:rgba(12,12,10,.62);display:none;align-items:center;justify-content:center;padding:28px}
+.qtd-mask.on{display:flex}
+.qtd{width:min(1380px,96vw);height:min(860px,90vh);background:var(--dark);border:1px solid #32322D;border-radius:14px;display:flex;flex-direction:column;overflow:hidden;color:#EDEDE8;box-shadow:0 24px 64px rgba(0,0,0,.4)}
+.qtd-head{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid #32322D;flex:0 0 auto}
+.qtd-head h3{font-size:15px;font-weight:600;margin:0;color:#F2F1ED}
+.qtd-head .sub{font-size:12px;color:#8E8C84}
+.qtd-head .ops{margin-left:auto;display:flex;gap:8px}
+.qbtn{height:30px;padding:0 12px;border-radius:6px;font-size:12.5px;border:1px solid #3A3A34;background:transparent;color:#C9C7BF;cursor:pointer;transition:all .14s}
+.qbtn:hover{background:#262622;color:#F2F1ED}
+.qbtn.pri{background:#F2F1ED;color:#1C1C1A;border-color:#F2F1ED;font-weight:500}
+.qbtn.pri:hover{background:#fff}
+.qbtn.on{background:#2E2E29;color:#F2F1ED;border-color:#4A4A42}
+.qtd-bar{display:flex;align-items:center;gap:14px;padding:10px 20px;border-bottom:1px solid #32322D;flex:0 0 auto;flex-wrap:wrap}
+.qtd-sel{display:flex;align-items:center;gap:8px;font-size:12px;color:#8E8C84}
+.qtd-sel select{height:30px;background:#1E1E1B;color:#EDEDE8;border:1px solid #3A3A34;border-radius:6px;padding:0 8px;font-size:12.5px;font-family:inherit;cursor:pointer}
+.qtd-zoom{display:flex;gap:4px;margin-left:auto;align-items:center}
+.qtd-zoom .znow{font-size:11.5px;color:#8E8C84;margin-left:8px;min-width:56px}
+.qtd-duo{flex:1;display:flex;gap:4px;padding:16px 20px 8px;min-height:0}
+.qtd-vp{flex:1;position:relative;background:#0D0D0C;border:1px solid #2A2A26;border-radius:8px;overflow:hidden;cursor:grab;min-width:0}
+.qtd-vp.grabbing{cursor:grabbing}
+.qtd-img{position:absolute;transform-origin:0 0;will-change:width,height,left,top}
+.qtd-vp .lo{position:absolute;left:10px;top:10px;z-index:3;background:rgba(18,18,16,.78);font-size:11.5px;color:#EDEDE8;padding:4px 10px;border-radius:999px;pointer-events:none}
+.qtd-vp .lo b{font-weight:600}
+.qtd-stat{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;gap:14px;align-items:center;padding:6px 12px;background:rgba(13,13,12,.82);border-top:1px solid #262622;font-family:var(--mono);font-size:11px;color:#A9A79E;pointer-events:none}
+.qtd-stat b{color:#EDEDE8;font-weight:600}
+.qtd-tip{flex:0 0 auto;padding:6px 20px 0;font-size:11.5px;color:#8E8C84;text-align:center}
+.qtd-cards{flex:0 0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:10px 20px 6px}
+.qtd-card{background:#1E1E1B;border:1px solid #2E2E29;border-radius:8px;padding:10px 14px;cursor:pointer;transition:border-color .14s,background .14s}
+.qtd-card:hover{border-color:#4A4A42}
+.qtd-card.on{border-color:#4CAF7D;background:#22271F;box-shadow:inset 0 0 0 1px #4CAF7D}
+.qtd-card .t{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#F2F1ED}
+.qtd-card .t .dot{width:6px;height:6px;border-radius:50%;background:#4A4A42}
+.qtd-card.on .t .dot{background:#4CAF7D}
+.qtd-card .d{font-size:11px;color:#8E8C84;margin-top:4px;font-family:var(--mono)}
+.qtd-card .d b{color:#C9C7BF;font-weight:500}
+.qtd-sum{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:8px 20px 14px;font-size:12px;color:#A9A79E}
+.qtd-sum b{color:#F2F1ED}
+.qtd-foot-note{font-size:11px;color:#6B6960;margin-left:auto}
+/* 自定义单滑条（弹窗内，与抽屉实时互通） */
+.qtd-custom{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:0 20px 10px;font-size:12px;color:#A9A79E}
+.qtd-custom input[type=range]{flex:1;accent-color:#EDEDE8;height:20px}
+.qtd-custom b{color:#F2F1ED;font-family:var(--mono);font-weight:600;min-width:110px}
+.qtd-custom .hint{font-size:11px;color:#6B6960}
+/* 满屏斜向平铺水印 */
+.wm-cover{position:absolute;inset:0;z-index:2;pointer-events:none;background-repeat:repeat}
+.wm-demo{position:relative;height:120px;border-radius:8px;overflow:hidden;border:1px solid var(--line2);margin-top:10px}
+.wm-demo .ph{position:absolute;inset:0}
+.wm-demo .wm-cover{border-radius:0}
+.wm-tag{position:absolute;left:10px;bottom:8px;z-index:3;font-size:10.5px;color:#fff;background:rgba(18,18,16,.62);padding:2px 8px;border-radius:999px}
+/* 抽屉内自定义单滑条 */
+.csingle{background:var(--sunken);border-radius:8px;padding:12px 14px;margin-top:10px}
+.csingle.hidden{display:none}
+.cs-row{display:flex;align-items:center;gap:10px;font-size:12.5px}
+.cs-row .lbl{color:var(--fg2);flex:0 0 42px}
+.cs-row input[type=range]{flex:1;accent-color:var(--ink)}
+.cs-row b{font-family:var(--mono);font-weight:600;min-width:108px;text-align:right}
+.cs-note{font-size:11px;color:var(--muted);margin-top:6px}
 </style>
 </head>
 <body>
@@ -850,14 +910,32 @@ DSC01023.JPG
       <div style="margin-top:24px">
         <div style="font-size:12.5px;font-weight:600;margin-bottom:10px">上传规格</div>
         <div class="spec-grid" id="specGrid">
-          <button class="spec on"><div class="n">标准 <span class="rec">推荐</span></div><div class="v">1600 px / 0.75</div></button>
-          <button class="spec"><div class="n">高清</div><div class="v">2048 px / 0.82</div></button>
-          <button class="spec"><div class="n">高清 Pro</div><div class="v">2880 px / 0.90</div></button>
-          <button class="spec"><div class="n">原画质</div><div class="v">4096 px / 0.92</div></button>
+          <button class="spec on" data-c="standard"><div class="n">标准 <span class="rec">推荐</span></div><div class="v">1600 px / 0.75</div></button>
+          <button class="spec" data-c="hd"><div class="n">高清</div><div class="v">2048 px / 0.82</div></button>
+          <button class="spec" data-c="hdpro"><div class="n">高清 Pro</div><div class="v">2880 px / 0.90</div></button>
+          <button class="spec" data-c="raw"><div class="n">原画质</div><div class="v">4096 px / 0.92</div></button>
+          <button class="spec" data-c="custom"><div class="n">自定义</div><div class="v" id="drCustomV">1600 px · 75%</div></button>
+        </div>
+        <div class="csingle hidden" id="drCustomBox">
+          <div class="cs-row"><span class="lbl">清晰度</span>
+            <input type="range" id="drCustomT" min="0" max="300" step="1" value="0" oninput="drCustomInput()">
+            <b id="drCustomVal">1600 px · 75%</b></div>
+          <div class="cs-note">滑条两端 = 标准 ↔ 原画质，长边与画质自动插值 —— 与「画质对比」弹窗里的自定义滑条实时互通</div>
         </div>
         <p style="font-size:11.5px;color:#8A897F;margin:10px 0 0;line-height:1.6">
           画质是上传时的选择，决定模特看到的预览清晰度。原图（RAW）始终保留在你本地，不会上传。
         </p>
+      </div>
+      <div style="margin-top:24px">
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">水印（可选）</div>
+        <div class="field" style="width:100%">
+          <input id="drWm" maxlength="20" placeholder="留空则不加" oninput="drWmUpdate()" value="番茄摄影工作室">
+        </div>
+        <div class="wm-demo">
+          <div class="ph k2"></div>
+          <div class="wm-cover" id="drWmCover"></div>
+          <span class="wm-tag">预览 ≈ 成图效果 · 斜向平铺覆盖全图，截图裁不掉</span>
+        </div>
       </div>
       <div style="margin-top:24px">
         <div style="display:flex;align-items:center;margin-bottom:8px">
@@ -1388,6 +1466,75 @@ DSC01023.JPG
   </div>
 </div>
 
+<!-- ==================== SECTION 10 · 画质预览对比 ==================== -->
+<div class="ds-sec" id="s10">
+  <div class="ds-sec-head"><span class="idx">SECTION 10</span><h2>画质预览对比 · 弹窗</h2><p>参考 PS「存储为 Web」· 深色全屏工作台 · 独立顶层（打开上传抽屉不再变灰）· 自定义档实时可调并与上传抽屉互通</p></div>
+  <p class="ds-note">
+    <button class="btn btn-pri btn-sm" onclick="openQD()">打开画质预览对比</button>
+    &nbsp;弹窗为<b>独立顶层浮层</b>（z-index 70，高于上传抽屉 50 / 底部进度条 45，低于大图 90）。
+    第五张「自定义」卡片可调：底部<b>单滑条</b>两端锚死 标准 ↔ 原画质，长边与画质自动插值，<b>与上传抽屉里的自定义滑条实时互通</b>；抽屉水印输入后，弹窗两视口同步叠加同款平铺水印——所见即所得。
+    演示中「标准」档在放大状态下用轻微模糊模拟有损压缩，体积为示例值。
+  </p>
+</div>
+
+<!-- 画质对比弹窗本体（fixed，由 openQD() 唤起） -->
+<div class="qtd-mask" id="qtdMask">
+  <div class="qtd">
+    <div class="qtd-head">
+      <h3>画质预览对比</h3>
+      <span class="sub" id="qdSub">样张 1 / 3 · 原图 8192×5464</span>
+      <div class="ops">
+        <button class="qbtn" onclick="qdSampleCycle();qdToast()">换一张样张</button>
+        <button class="qbtn pri" onclick="closeQD()">用这个档位</button>
+        <button class="qbtn" onclick="closeQD()">✕</button>
+      </div>
+    </div>
+    <div class="qtd-bar">
+      <span class="qtd-sel"><span>左侧 A</span>
+        <select id="qdSelA" onchange="qdApply()">
+          <option value="standard" selected>标准</option><option value="hd">高清</option><option value="hdpro">高清 Pro</option><option value="raw">原画质</option><option value="custom">自定义</option>
+        </select></span>
+      <span class="qtd-sel"><span>右侧 B</span>
+        <select id="qdSelB" onchange="qdApply()">
+          <option value="standard">标准</option><option value="hd">高清</option><option value="hdpro">高清 Pro</option><option value="raw" selected>原画质</option><option value="custom">自定义</option>
+        </select></span>
+      <div class="qtd-zoom">
+        <button class="qbtn on" data-zm="fit" onclick="qdZoom('fit',this)">适应窗口</button>
+        <button class="qbtn" data-zm="1" onclick="qdZoom('1',this)">100%</button>
+        <button class="qbtn" data-zm="2" onclick="qdZoom('2',this)">200%</button>
+        <span class="znow" id="qdZnow">当前 12%</span>
+      </div>
+    </div>
+    <div class="qtd-duo">
+      <div class="qtd-vp" id="qdVpA">
+        <div class="qtd-img k1" id="qdImgA"><div class="wm-cover" id="qdWmA"></div></div>
+        <span class="lo">A · <b id="qdTagA">标准 1600×1067</b></span>
+        <div class="qtd-stat"><span>JPG</span><span>q75</span><span>1600×1067</span><span>实测 <b id="qdKbA">286 KB</b></span></div>
+      </div>
+      <div class="qtd-vp" id="qdVpB">
+        <div class="qtd-img k1" id="qdImgB"><div class="wm-cover" id="qdWmB"></div></div>
+        <span class="lo">B · <b id="qdTagB">原画质 4096×2731</b></span>
+        <div class="qtd-stat"><span>JPG</span><span>q92</span><span>4096×2731</span><span>实测 <b id="qdKbB">1843 KB</b></span></div>
+      </div>
+    </div>
+    <p class="qtd-tip" id="qdTip">整体看不出差异是正常的 —— 请切 100% 或 200% 对比细节 · 滚轮缩放，按住拖动</p>
+    <div class="qtd-cards" id="qdCards">
+      <div class="qtd-card on" data-q="standard" onclick="qdPick(this)"><div class="t"><span class="dot"></span>标准</div><div class="d">长边 1600 · q75</div><div class="d">样张实测 <b>286 KB</b></div><div class="d">这批 48 张 ≈ <b>14.9 MB</b></div></div>
+      <div class="qtd-card" data-q="hd" onclick="qdPick(this)"><div class="t"><span class="dot"></span>高清</div><div class="d">长边 2048 · q82</div><div class="d">样张实测 <b>468 KB</b></div><div class="d">这批 48 张 ≈ <b>23.6 MB</b></div></div>
+      <div class="qtd-card" data-q="hdpro" onclick="qdPick(this)"><div class="t"><span class="dot"></span>高清 Pro</div><div class="d">长边 2880 · q90</div><div class="d">样张实测 <b>812 KB</b></div><div class="d">这批 48 张 ≈ <b>40.1 MB</b></div></div>
+      <div class="qtd-card" data-q="raw" onclick="qdPick(this)"><div class="t"><span class="dot"></span>原画质</div><div class="d">长边 4096 · q92</div><div class="d">样张实测 <b>1843 KB</b></div><div class="d">这批 48 张 ≈ <b>89.2 MB</b></div></div>
+      <div class="qtd-card" data-q="custom" onclick="qdPick(this)"><div class="t"><span class="dot"></span>自定义</div><div class="d" id="qdCustomSpec">长边 1600 · q75</div><div class="d">样张实测 <b id="qdCustomKb">286 KB</b></div><div class="d">这批 48 张 ≈ <b id="qdCustomTot">14.9 MB</b></div></div>
+    </div>
+    <div class="qtd-custom">
+      <span>自定义清晰度</span>
+      <input type="range" id="qdCustomT" min="0" max="300" step="1" value="0" oninput="qdCustomInput()">
+      <b id="qdCustomVal">1600 px · 75%</b>
+      <span class="hint">与上传抽屉「自定义」实时互通</span>
+    </div>
+    <div class="qtd-sum">已选档位：<b id="qdCur">标准</b><span>含缩略图，预估，实际以云端为准</span><span class="qtd-foot-note">缩放与平移在 A / B 两视口完全同步 —— 任何时候看到的是同一构图区域</span></div>
+  </div>
+</div>
+
 <p style="text-align:center;color:#8A897F;font-size:12px;margin:40px 0 0;line-height:1.8">
   摄影线上选片平台 · Web 摄影师控制台 UI 2.0 · 设计稿仅用于视觉评审与编码参考<br>
   业务逻辑保持不变：项目 → 照片墙 → 模特选片 → 文件名清单 → Lightroom
@@ -1737,6 +1884,258 @@ renderProjects();
 renderWall();
 renderResult();
 showView('detail');
+
+/* ============================================================
+   SECTION 10 · 画质预览对比弹窗（演示版）
+   双视口共用一组视图状态 {mode, z, panX, panY}（12 文档 3.1）
+   自定义单滑条：值域 0~300，两端锚死 标准(1600/0.75) ↔ 原画质(4096/0.92)，
+   中间按 高清 / 高清 Pro 锚点插值；弹窗滑条与抽屉滑条共享 CUSTOM_T。
+   ============================================================ */
+var QD_PRESETS = {
+  standard:{label:'标准',   longEdge:1600, q:75, kb:286,  blur:1.6},
+  hd:      {label:'高清',   longEdge:2048, q:82, kb:468,  blur:0.9},
+  hdpro:   {label:'高清 Pro',longEdge:2880, q:90, kb:812,  blur:0.4},
+  raw:     {label:'原画质',  longEdge:4096, q:92, kb:1843, blur:0}
+};
+var QD_SAMPLES = [
+  {cls:'k1', w:8192, h:5464},
+  {cls:'k5', w:5464, h:8192},
+  {cls:'k9', w:8192, h:5464}
+];
+var QD_ANCHORS = [[1600,0.75],[2048,0.82],[2880,0.90],[4096,0.92]]; // 与四档常量一致
+var QD_BLURS   = [1.6, 0.9, 0.4, 0];                                // 演示用：档位 → 模糊量
+var CUSTOM_T = 0; // 自定义滑条共享值（弹窗 / 抽屉同一份）
+
+function qdSpecOf(t){
+  t = Math.min(300, Math.max(0, t));
+  var seg = Math.min(2, Math.floor(t / 100));
+  var r = (t - seg * 100) / 100;
+  var a = QD_ANCHORS[seg], b = QD_ANCHORS[seg + 1];
+  var le = Math.round(a[0] + (b[0] - a[0]) * r);
+  var q = a[1] + (b[1] - a[1]) * r;
+  var kb = Math.round(286 * (le / 1600) * (q / 0.75));
+  return { longEdge: le, q: Math.round(q * 100), kb: kb };
+}
+function blurAtT(t){
+  t = Math.min(300, Math.max(0, t));
+  var seg = Math.min(2, Math.floor(t / 100));
+  var r = (t - seg * 100) / 100;
+  return (QD_BLURS[seg] + (QD_BLURS[seg + 1] - QD_BLURS[seg]) * r).toFixed(2);
+}
+/** 取某档位的展示参数（custom 实时按滑条算） */
+function qdPresetOf(key){
+  if (key !== 'custom') return QD_PRESETS[key];
+  var s = qdSpecOf(CUSTOM_T);
+  return { label: '自定义', longEdge: s.longEdge, q: s.q, kb: s.kb, blur: Number(blurAtT(CUSTOM_T)) };
+}
+function qdGen(sideKey){
+  var p = qdPresetOf(sideKey), s = QD_SAMPLES[qdSample];
+  var land = s.w >= s.h;
+  var w = land ? p.longEdge : Math.round(p.longEdge * s.w / s.h);
+  var h = land ? Math.round(p.longEdge * s.h / s.w) : p.longEdge;
+  return {w:w, h:h};
+}
+function qdMaskEl(){ return document.getElementById('qtdMask'); }
+function qdVpA(){ return document.getElementById('qdVpA'); }
+
+/* ---------- 水印：满屏斜向平铺（抽屉输入 → 抽屉预览 + 弹窗两视口 同步） ---------- */
+function wmBg(text){
+  if (!text) return 'none';
+  var fs = 15, w = 190, h = 130;
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">' +
+    '<text x="' + (w/2) + '" y="' + (h/2) + '" font-size="' + fs + '" fill="#ffffff" fill-opacity="0.17" ' +
+    'text-anchor="middle" dominant-baseline="middle" transform="rotate(-24 ' + (w/2) + ' ' + (h/2) + ')">' +
+    text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</text></svg>';
+  return "url('data:image/svg+xml;utf8," + encodeURIComponent(svg) + "')";
+}
+function wmSync(){
+  var text = document.getElementById('drWm').value.trim();
+  var bg = wmBg(text);
+  var ids = ['drWmCover','qdWmA','qdWmB'];
+  for (var i = 0; i < ids.length; i++) {
+    var el = document.getElementById(ids[i]);
+    if (el) el.style.backgroundImage = bg;
+  }
+}
+function drWmUpdate(){ wmSync(); }
+
+/* ---------- 自定义滑条：弹窗 ↔ 抽屉 双向互通（单源 CUSTOM_T） ---------- */
+function qdCustomInput(){ setCustomT(document.getElementById('qdCustomT').value); }
+function drCustomInput(){ setCustomT(document.getElementById('drCustomT').value); }
+function setCustomT(t){
+  CUSTOM_T = Number(t);
+  var s = qdSpecOf(CUSTOM_T);
+  var txt = s.longEdge + ' px · ' + s.q + '%';
+  document.getElementById('qdCustomT').value = CUSTOM_T;
+  document.getElementById('drCustomT').value = CUSTOM_T;
+  document.getElementById('qdCustomVal').textContent = txt;
+  document.getElementById('drCustomVal').textContent = txt;
+  document.getElementById('drCustomV').textContent = txt;
+  document.getElementById('qdCustomSpec').textContent = '长边 ' + s.longEdge + ' · q' + s.q;
+  document.getElementById('qdCustomKb').textContent = s.kb + ' KB';
+  document.getElementById('qdCustomTot').textContent = (s.kb * 48 / 1024).toFixed(1) + ' MB';
+  if (qdMaskEl().classList.contains('on') &&
+      (document.getElementById('qdSelA').value === 'custom' ||
+       document.getElementById('qdSelB').value === 'custom')) qdRender();
+}
+function qdSampleCycle(){
+  qdSample = (qdSample + 1) % QD_SAMPLES.length;
+  qdApply();
+}
+function qdToast(){
+  var t = document.getElementById('toast');
+  t.textContent = '已换样张，四档重新生成（演示）';
+  t.classList.add('on');
+  setTimeout(function(){ t.classList.remove('on'); }, 1800);
+}
+function qdPick(card){
+  var cards = document.querySelectorAll('#qdCards .qtd-card');
+  for (var i = 0; i < cards.length; i++) cards[i].classList.remove('on');
+  card.classList.add('on');
+  document.getElementById('qdCur').textContent = card.querySelector('.t').textContent.trim();
+}
+function qdZoom(m, btn){
+  qdMode = m === 'fit' ? 'fit' : Number(m);
+  qdPX = 0; qdPY = 0;
+  var bs = document.querySelectorAll('.qtd-zoom [data-zm]');
+  for (var i = 0; i < bs.length; i++) bs[i].classList.remove('on');
+  if (btn) btn.classList.add('on');
+  qdRender();
+}
+function qdApply(){
+  var cls = 'qtd-img ' + QD_SAMPLES[qdSample].cls;
+  document.getElementById('qdImgA').className = cls;
+  document.getElementById('qdImgB').className = cls;
+  qdRender();
+}
+function qdClamp(D, imgH){
+  var vp = qdVpA();
+  var w = vp.clientWidth, h = vp.clientHeight;
+  // 钳制：图不大于视口时居中，否则限制在 [w-D, 0]，不能把图拖丢
+  if (D <= w) qdPX = (w - D) / 2;
+  else qdPX = Math.min(0, Math.max(w - D, qdPX));
+  if (imgH <= h) qdPY = (h - imgH) / 2;
+  else qdPY = Math.min(0, Math.max(h - imgH, qdPY));
+}
+function qdRender(){
+  var s = QD_SAMPLES[qdSample];
+  document.getElementById('qdSub').textContent = '样张 ' + (qdSample + 1) + ' / ' + QD_SAMPLES.length + ' · 原图 ' + s.w + '×' + s.h;
+  var keyA = document.getElementById('qdSelA').value;
+  var keyB = document.getElementById('qdSelB').value;
+  var pa = qdPresetOf(keyA), pb = qdPresetOf(keyB);
+  var a = qdGen(keyA);
+  var b = qdGen(keyB);
+  var vp = qdVpA();
+  var D = qdMode === 'fit' ? vp.clientWidth : a.w * qdZ;
+  var imgH = D * (a.h / a.w);
+  qdClamp(D, imgH);
+
+  var ratio = a.h / a.w;
+  var imgA = document.getElementById('qdImgA');
+  var imgB = document.getElementById('qdImgB');
+  imgA.style.width = imgB.style.width = D + 'px';
+  imgA.style.height = imgB.style.height = (D * ratio) + 'px';
+  imgA.style.left = imgB.style.left = qdPX + 'px';
+  imgA.style.top = imgB.style.top = qdPY + 'px';
+
+  // 压缩差异模拟：fit 模式下各档视觉一致（下采样抹平差异），放大后按档位加模糊
+  var zoomed = qdMode !== 'fit';
+  imgA.style.filter = zoomed ? 'blur(' + pa.blur + 'px)' : 'none';
+  imgB.style.filter = zoomed ? 'blur(' + pb.blur + 'px)' : 'none';
+
+  // 标签与状态条
+  document.getElementById('qdTagA').textContent = pa.label + ' ' + a.w + '×' + a.h;
+  document.getElementById('qdTagB').textContent = pb.label + ' ' + b.w + '×' + b.h;
+  document.getElementById('qdKbA').textContent = pa.kb + ' KB';
+  document.getElementById('qdKbB').textContent = pb.kb + ' KB';
+  var stA = vp.querySelector('.qtd-stat'), stB = document.getElementById('qdVpB').querySelector('.qtd-stat');
+  stA.children[1].textContent = 'q' + pa.q; stA.children[2].textContent = a.w + '×' + a.h;
+  stB.children[1].textContent = 'q' + pb.q; stB.children[2].textContent = b.w + '×' + b.h;
+
+  var nowPct = Math.round(D / a.w * 100);
+  document.getElementById('qdZnow').textContent = '当前 ' + nowPct + '%';
+  document.getElementById('qdTip').textContent = zoomed
+    ? '滚轮缩放 · 按住拖动 · 两视口始终显示同一构图区域'
+    : '整体看不出差异是正常的 —— 请切 100% 或 200% 对比细节';
+}
+function openQD(){
+  qdMaskEl().classList.add('on');
+  qdMode = 'fit'; qdPX = 0; qdPY = 0;
+  document.body.style.overflow = 'hidden';
+  qdRender();
+}
+function closeQD(){
+  qdMaskEl().classList.remove('on');
+  document.body.style.overflow = '';
+}
+
+/* 滚轮缩放（以光标为锚点）+ 拖动平移，A/B 同步 */
+(function(){
+  var duo = document.querySelector('.qtd-duo');
+  duo.addEventListener('wheel', function(e){
+    if (!qdMaskEl().classList.contains('on')) return;
+    e.preventDefault();
+    var a = qdGen(document.getElementById('qdSelA').value);
+    var vp = qdVpA();
+    var rect = vp.getBoundingClientRect();
+    var cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+    var oldD = qdMode === 'fit' ? vp.clientWidth : a.w * qdZ;
+    var oldZ = oldD / a.w;
+    var newZ = Math.min(8, Math.max(0.05, oldZ * (e.deltaY < 0 ? 1.2 : 1 / 1.2)));
+    qdMode = 0; // 自定义倍率
+    qdZ = newZ;
+    var newD = a.w * newZ;
+    qdPX = cx - ((cx - qdPX) / oldD) * newD;
+    qdPY = cy - ((cy - qdPY) / oldD) * newD;
+    var bs = document.querySelectorAll('.qtd-zoom [data-zm]');
+    for (var i = 0; i < bs.length; i++) bs[i].classList.remove('on');
+    qdRender();
+  }, {passive:false});
+
+  var dragging = false, sx = 0, sy = 0, bx = 0, by = 0;
+  duo.addEventListener('mousedown', function(e){
+    if (!qdMaskEl().classList.contains('on')) return;
+    dragging = true; sx = e.clientX; sy = e.clientY; bx = qdPX; by = qdPY;
+    document.getElementById('qdVpA').classList.add('grabbing');
+    document.getElementById('qdVpB').classList.add('grabbing');
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e){
+    if (!dragging) return;
+    qdPX = bx + (e.clientX - sx);
+    qdPY = by + (e.clientY - sy);
+    var a = qdGen(document.getElementById('qdSelA').value);
+    var D = qdMode === 'fit' ? qdVpA().clientWidth : a.w * qdZ;
+    qdClamp(D, D * (a.h / a.w));
+    qdRender();
+  });
+  document.addEventListener('mouseup', function(){
+    dragging = false;
+    document.getElementById('qdVpA').classList.remove('grabbing');
+    document.getElementById('qdVpB').classList.remove('grabbing');
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && qdMaskEl().classList.contains('on')) { closeQD(); e.stopPropagation(); }
+  });
+  window.addEventListener('resize', function(){ if (qdMaskEl().classList.contains('on')) qdRender(); });
+})();
+
+/* 抽屉规格卡切换（含自定义卡展开滑条） */
+(function(){
+  var grid = document.getElementById('specGrid');
+  grid.addEventListener('click', function(e){
+    var b = e.target.closest('[data-c]');
+    if (!b) return;
+    var all = grid.querySelectorAll('.spec');
+    for (var i = 0; i < all.length; i++) all[i].classList.remove('on');
+    b.classList.add('on');
+    document.getElementById('drCustomBox').classList.toggle('hidden', b.getAttribute('data-c') !== 'custom');
+  });
+})();
+
+/* ---------- SECTION 10 初始化 ---------- */
+setCustomT(0);
+wmSync();
 </script>
 </body>
 </html>

@@ -20,15 +20,15 @@ const THUMB_QUALITY = 0.7
 const CONCURRENCY = 3
 
 /**
- * 画质四档。默认 standard = 1600 / 0.75 —— 单条最大的成本杠杆
- * 单位体积比约为 标准 1 : 高清 2.2 : 高清Pro 4.8 : 原画质 8.8
- * 原画质不要开到 q95：2.8MB/张时 500 张的项目模特端要下 560MB，模特的手机先崩
+ * 画质四档（与 web/uploader.js 的 PRESETS 保持一致）：标清 1200 / 高清 1600 / 高清 Pro 2880 / 原画质 4096
+ * standard 为旧档位名（= 高清），仅兼容历史数据
  */
 const PRESETS = {
-  standard: { longEdge: 1600, quality: 0.75 },
-  hd: { longEdge: 2048, quality: 0.82 },
+  low: { longEdge: 1200, quality: 0.55 },
+  hd: { longEdge: 1600, quality: 0.75 },
   hdpro: { longEdge: 2880, quality: 0.9 },
   raw: { longEdge: 4096, quality: 0.92 },
+  standard: { longEdge: 1600, quality: 0.75 },
 }
 
 let app = null

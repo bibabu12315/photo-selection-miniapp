@@ -13,10 +13,11 @@ const BUCKET = '636c-cloud1-d2guu7uw1a306815a-1499127316'
  * 只用于把「这次上传实际用的档位」回写到 project.previewSpec（BR-302），改档位需两处同步。
  */
 const PREVIEW_PRESETS = {
-  standard: { longEdge: 1600, quality: 75 },
-  hd: { longEdge: 2048, quality: 82 },
+  low: { longEdge: 1200, quality: 55 },
+  hd: { longEdge: 1600, quality: 75 },
   hdpro: { longEdge: 2880, quality: 90 },
   raw: { longEdge: 4096, quality: 92 },
+  standard: { longEdge: 1600, quality: 75 }, // 旧档位名（= 高清），仅兼容历史数据
 }
 
 /**

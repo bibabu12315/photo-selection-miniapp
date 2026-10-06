@@ -11,22 +11,24 @@ export const ENV_ID = 'cloud1-d2guu7uw1a306815a'
 export const DEFAULT_EXPIRE_DAYS = 30
 
 /**
- * 预览图规格（与 web/upload.js 的 PRESETS 保持一致）
- * 默认 standard = 1600 / 75：存储 + CDN 直接砍一半，是最划算的一档
+ * 预览图规格（与 web/uploader.js 的 PRESETS 保持一致）
+ * 标清 1200 / 高清 1600 / 高清 Pro 2880 / 原画质 4096（standard 为旧档位名 = 高清，仅兼容历史数据）
  */
 export const PREVIEW_PRESET = {
-  standard: { longEdge: 1600, quality: 75 },
-  hd: { longEdge: 2048, quality: 82 },
+  low: { longEdge: 1200, quality: 55 },
+  hd: { longEdge: 1600, quality: 75 },
   hdpro: { longEdge: 2880, quality: 90 },
   raw: { longEdge: 4096, quality: 92 },
+  standard: { longEdge: 1600, quality: 75 },
 }
 
 /** 每档的单张预览图体积（MB），仅用于界面上给摄影师一个直观提示 */
 export const PRESET_SIZE_MB: Record<string, number> = {
-  standard: 0.25,
-  hd: 0.55,
+  low: 0.14,
+  hd: 0.25,
   hdpro: 1.2,
   raw: 2.2,
+  standard: 0.25,
 }
 
 /**

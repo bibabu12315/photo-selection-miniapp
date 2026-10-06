@@ -161,7 +161,7 @@
    * 元素 id 全部保留（up* 前缀），uploader.js 仍按 id 绑定 —— 只换视觉，不动传输层。
    * 规格卡是新增的等价控件：选中即回写隐藏的 select#upPreset 并派发 change。
    */
-  const SPEC_LABEL = { standard: '标准', hd: '高清', hdpro: '高清 Pro', raw: '原画质' }
+  const SPEC_LABEL = { low: '标清', hd: '高清', hdpro: '高清 Pro', raw: '原画质', standard: '高清' }
 
   function uploadZoneHtml() {
     const presets = (window.PhotoUploader && PhotoUploader.presets) || {}
@@ -170,10 +170,14 @@
       .map(function (k) {
         const it = presets[k]
         return (
-          '<button class="spec' + (k === 'standard' ? ' on' : '') + '" data-spec="' + k + '">' +
+          '<button class="spec' + (k === 'hd' ? ' on' : '') + '" data-spec="' + k + '">' +
           '<div class="n">' + escapeHtml(SPEC_LABEL[k] || it.label || k) +
-          (k === 'standard' ? '<span class="rec">推荐</span>' : '') + '</div>' +
-          '<div class="v">' + (k === 'custom' ? '自己调长边与画质' : it.longEdge + ' px / ' + it.quality) + '</div>' +
+          (k === 'hd' ? '<span class="rec">推荐</span>' : '') + '</div>' +
+          '<div class="v">' +
+          (k === 'custom'
+            ? it.longEdge + ' px · ' + Math.round(it.quality * 100) + '%'
+            : it.longEdge + ' px / ' + it.quality) +
+          '</div>' +
           '</button>'
         )
       })
@@ -181,7 +185,7 @@
     const opts = keys
       .map(function (k) {
         return (
-          '<option value="' + k + '"' + (k === 'standard' ? ' selected' : '') + '>' +
+          '<option value="' + k + '"' + (k === 'hd' ? ' selected' : '') + '>' +
           escapeHtml(presets[k].label || k) + '</option>'
         )
       })
@@ -202,15 +206,13 @@
       '<div class="dr-sec-t">上传规格</div>' +
       '<div class="spec-grid" id="specGrid">' + cards + '</div>' +
       '<select id="upPreset" hidden>' + opts + '</select>' +
-      // 自定义档滑条（选中「自定义」卡时出现，实时写回 PhotoUploader.presets.custom）
+      // 自定义档单滑条（0~300：两端锚死 标准 ↔ 原画质，中间按 高清 / 高清 Pro 插值；
+      // 与「画质对比」弹窗里的同一根滑条实时互通，单源写入 PhotoUploader.presets.custom）
       '<div class="custom-spec hidden" id="customSpec">' +
-      '<div class="cs-row"><span class="lbl">长边</span>' +
-      '<input id="upLongEdge" type="range" min="1200" max="4096" step="100" value="1600">' +
-      '<b id="upLongEdgeV">1600 px</b></div>' +
-      '<div class="cs-row"><span class="lbl">画质</span>' +
-      '<input id="upQualityRange" type="range" min="40" max="95" step="1" value="75">' +
-      '<b id="upQualityV">75%</b></div>' +
-      '<div class="cs-note">拖动即改，立即对这批照片生效</div>' +
+      '<div class="cs-row"><span class="lbl">清晰度</span>' +
+      '<input id="upCustomT" type="range" min="0" max="200" step="1" value="100">' +
+      '<b id="upCustomV">1600 px · 75%</b></div>' +
+      '<div class="cs-note">最左 ≈ 标清一半清晰度（800px · q42），最右 = 原画质，「高清」正好在中间；与「画质对比」弹窗里的自定义滑条实时互通</div>' +
       '</div>' +
       '<p class="drop-note" style="margin-top:10px;justify-content:flex-start;line-height:1.6;text-align:left">' +
       '画质是上传时的选择，决定模特看到的预览清晰度。原图（RAW）始终保留在你本地，不会上传。' +
@@ -219,9 +221,12 @@
 
       '<div class="dr-sec">' +
       '<div class="dr-sec-t">水印（可选）</div>' +
-      '<div class="field" style="width:100%">' +
+      '<div class="field">' +
       '<input id="upWatermark" type="text" maxlength="20" placeholder="留空则不加">' +
       '</div>' +
+      // 水印预览（canvas 绘制，随屏幕 DPR 渲染，文字锐利；深色底衬托白色水印；与实际成图同一套参数）
+      '<div class="wm-demo"><div class="ph"></div><canvas class="wm-cover" id="upWmCover"></canvas>' +
+      '<span class="wm-tag">预览 ≈ 成图效果</span></div>' +
       '</div>' +
 
       '<div class="dr-sec">' +
@@ -1229,8 +1234,8 @@
       // 延期 / 归档 / 删除直接并排在头部（不再收进 ⋯ 菜单）
       (p.status === 'ARCHIVED'
         ? ''
-        : '<button class="btn btn-ghost btn-sm" data-hd="extend">延期 30 天</button>' +
-          '<button class="btn btn-ghost btn-sm" data-hd="archive">归档</button>') +
+        : '<button class="btn btn-sec btn-sm" data-hd="extend">延期 30 天</button>' +
+          '<button class="btn btn-sec btn-sm" data-hd="archive">归档</button>') +
       '<button class="btn btn-ghost btn-sm hd-danger" data-hd="remove">删除项目</button>' +
       '</div>' +
       '</div>' +
@@ -1497,18 +1502,17 @@
     const sel = $('upPreset')
     if (!grid || !sel) return
     const customBox = $('customSpec')
-    const le = $('upLongEdge')
-    const q = $('upQualityRange')
-    const leV = $('upLongEdgeV')
-    const qV = $('upQualityV')
+    const ct = $('upCustomT')
+    const ctV = $('upCustomV')
 
     const syncCustom = function () {
       if (!customBox) return
       customBox.classList.toggle('hidden', sel.value !== 'custom')
+      const p = (window.PhotoUploader && PhotoUploader.presets && PhotoUploader.presets.custom) || null
+      const txt = p ? p.longEdge + ' px · ' + Math.round(p.quality * 100) + '%' : ''
       const card = grid.querySelector('[data-spec="custom"] .v')
-      if (card && le && q) card.textContent = '长边 ' + le.value + ' · 画质 ' + q.value + '%'
-      if (le && leV) leV.textContent = le.value + ' px'
-      if (q && qV) qV.textContent = q.value + '%'
+      if (card && txt) card.textContent = txt
+      if (ctV && txt) ctV.textContent = txt
     }
 
     const sync = function () {
@@ -1518,16 +1522,26 @@
       syncCustom()
     }
 
-    if (customBox && le && q) {
-      const apply = function () {
-        if (window.PhotoUploader && PhotoUploader.setCustomSpec) {
-          PhotoUploader.setCustomSpec({ longEdge: Number(le.value), quality: Number(q.value) / 100 })
+    if (customBox && ct) {
+      ct.addEventListener('input', function () {
+        const t = Number(ct.value)
+        if (window.PhotoUploader && PhotoUploader.setCustomT) PhotoUploader.setCustomT(t)
+        // 弹窗开着时同步它那根滑条（弹窗自己的 input 监听会顺带重生成自定义档预览）
+        const q = document.getElementById('qtCustomT')
+        if (q && Number(q.value) !== t) {
+          q.value = String(t)
+          q.dispatchEvent(new Event('input'))
         }
         syncCustom()
+        // 自定义档参数变了 → 顶部「这批 N 张 ≈ XXX MB」的估算要跟着变
+        if (sel.value === 'custom') sel.dispatchEvent(new Event('change'))
+      })
+      if (window.PhotoUploader && PhotoUploader.customT) {
+        ct.value = String(PhotoUploader.customT())
       }
-      le.addEventListener('input', apply)
-      q.addEventListener('input', apply)
     }
+
+    bindWatermarkPreview()
 
     grid.onclick = function (e) {
       const b = e.target.closest('[data-spec]')
@@ -1538,6 +1552,64 @@
     }
     sel.addEventListener('change', sync) // 画质对比弹窗改值时也要同步卡片
     sync()
+  }
+
+  /**
+   * 抽屉水印预览：canvas 绘制（按 devicePixelRatio 渲染，文字锐利不糊）。
+   * 满屏 -24° 斜向平铺，与实际上传 drawWatermark / 画质对比弹窗同一套。
+   * 抽屉隐藏时 canvas 尺寸为 0，画不了 —— openUploadDrawer 每次打开都补一次重画。
+   */
+  let paintWmPreview = function () {}
+
+  function bindWatermarkPreview() {
+    const input = $('upWatermark')
+    const cv = $('upWmCover')
+    if (!input || !cv || !cv.getContext) return
+    const paint = function () {
+      const text = input.value.trim()
+      const tag = cv.parentNode.querySelector('.wm-tag')
+      if (tag) tag.textContent = '预览 ≈ 成图效果 · 满屏斜向平铺 · 截图裁不掉'
+      const w = cv.clientWidth
+      const h = cv.clientHeight
+      if (!w || !h) return
+      const dpr = window.devicePixelRatio || 1
+      const pw = Math.round(w * dpr)
+      const ph = Math.round(h * dpr)
+      if (cv.width !== pw || cv.height !== ph) {
+        cv.width = pw
+        cv.height = ph
+      }
+      const c = cv.getContext('2d')
+      c.setTransform(1, 0, 0, 1, 0, 0)
+      c.clearRect(0, 0, pw, ph)
+      if (!text) return
+      c.scale(dpr, dpr)
+      const min = Math.min(w, h)
+      const font = " 'Segoe UI', 'Microsoft YaHei', sans-serif"
+      // 满屏平铺：-24° 交错平铺，字号比实际成图略放大（预览块只有 150px 高，等比会小到看不清）
+      const size = Math.max(15, Math.round(min * 0.2))
+      const stepX = Math.round(size * 5.5)
+      const stepY = Math.round(size * 3.6)
+      c.save()
+      c.translate(w / 2, h / 2)
+      c.rotate((-24 * Math.PI) / 180)
+      c.font = size + 'px' + font
+      c.textAlign = 'center'
+      c.textBaseline = 'middle'
+      c.globalAlpha = 0.3
+      c.fillStyle = '#ffffff'
+      c.shadowColor = 'rgba(0,0,0,0.35)'
+      c.shadowBlur = size / 6
+      const R = Math.ceil(Math.sqrt(w * w + h * h) / 2) + stepX + stepY
+      let row = 0
+      for (let y = -R; y <= R; y += stepY, row++) {
+        const off = row % 2 ? stepX / 2 : 0
+        for (let x = -R + off; x <= R; x += stepX) c.fillText(text, x, y)
+      }
+      c.restore()
+    }
+    input.addEventListener('input', paint)
+    paintWmPreview = paint
   }
 
   /**
@@ -1569,6 +1641,12 @@
   function openUploadDrawer() {
     const shell = appShellEl()
     if (shell) shell.dataset.drawer = 'open'
+    // 同一项目再次打开上传抽屉：清掉上一批已选照片（上传中不动）
+    if (window.PhotoUploader && PhotoUploader.resetItems) PhotoUploader.resetItems()
+    // 抽屉显示后 canvas 才有尺寸：补一次水印预览重画
+    requestAnimationFrame(function () {
+      paintWmPreview()
+    })
   }
 
   /**
@@ -2603,7 +2681,9 @@
       '<div class="pcover">' +
       // 三列错落封面：有 coverThumbs 时由 fillProjCovers 填真实缩略图，没有就留深色
       '<div class="grid3"><div class="col wide"></div><div class="col"></div><div class="col"></div></div>' +
-      (total ? '<span class="cnt">' + total + ' 张</span>' : '') +
+      (total
+        ? '<span class="cnt">' + total + ' 张</span>'
+        : '<div class="pcover-empty"><div class="ic">↑</div><div class="t">还没有底片</div><div class="d">进入项目上传照片<br>这里就会显示封面</div></div>') +
       (urgent
         ? '<span class="act"><span class="btn btn-sec btn-sm" data-extend="' + escapeHtml(p._id) + '">续期 30 天</span></span>'
         : '') +
